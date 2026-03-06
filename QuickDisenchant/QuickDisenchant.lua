@@ -1,5 +1,4 @@
 local ADDON_PREFIX = "[QuickDisenchant]"
-local MIDNIGHT_ENCHANTING_SPELL_ID = 7411
 local DISENCHANT_SPELL_ID = 13262
 local DISENCHANT_SPELL_NAME = (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(DISENCHANT_SPELL_ID)) or (GetSpellInfo and GetSpellInfo(DISENCHANT_SPELL_ID)) or "分解"
 
@@ -57,6 +56,7 @@ local updateDisenchantButtonAction
 local isPendingItemUnchanged
 local buildDisenchantFailureReason
 local beginPendingDisenchant
+local isDisenchantSkillInsufficientFailure
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
@@ -75,26 +75,6 @@ local function registerEscClosableFrame(frame)
   end
 
   table.insert(UISpecialFrames, frameName)
-end
-
-local function hasCurrentVersionEnchanting()
-  if C_SpellBook and C_SpellBook.IsSpellKnown then
-    return C_SpellBook.IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
-  end
-
-  if IsSpellKnownOrOverridesKnown then
-    return IsSpellKnownOrOverridesKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
-  end
-
-  if IsSpellKnown then
-    return IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
-  end
-
-  if IsPlayerSpell then
-    return IsPlayerSpell(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
-  end
-
-  return false
 end
 
 local function hasDisenchantSpell()
@@ -584,6 +564,13 @@ resolvePendingDisenchant = function()
   local isSameItem = isPendingItemUnchanged(pending)
 
   if isSameItem then
+    if isDisenchantSkillInsufficientFailure(pending) then
+      state.selectedKeys[pending.key] = nil
+      refreshWindows()
+      print(string.format("%s 分解失败：附魔技能不足，已从列表移除：%s", ADDON_PREFIX, pending.itemLink or "物品"))
+      return
+    end
+
     print(string.format("%s 分解失败：%s", ADDON_PREFIX, buildDisenchantFailureReason(pending)))
     refreshWindows()
     return
@@ -633,6 +620,30 @@ buildDisenchantFailureReason = function(pending)
   end
 
   return "未进入可用的分解施法状态。"
+end
+
+isDisenchantSkillInsufficientFailure = function(pending)
+  if not pending or type(pending.errorText) ~= "string" or pending.errorText == "" then
+    return false
+  end
+
+  local errorText = pending.errorText
+  local skillPatterns = {
+    "附魔技能不足",
+    "附魔技能太低",
+    "附魔等级不足",
+    "附魔等级太低",
+    "需要更高的附魔",
+    "不足以分解",
+  }
+
+  for _, pattern in ipairs(skillPatterns) do
+    if string.find(errorText, pattern, 1, true) then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function refreshMainWindow()
@@ -714,11 +725,6 @@ local function resetSelectionToAllItems()
 end
 
 local function runScan()
-  if not hasCurrentVersionEnchanting() then
-    print(string.format("%s 未学习至暗之夜附魔。", ADDON_PREFIX))
-    return
-  end
-
   local items, itemsByKey = collectDisenchantableItems()
   state.allItems = items
   state.allItemsByKey = itemsByKey
