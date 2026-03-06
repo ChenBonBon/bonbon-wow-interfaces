@@ -576,6 +576,7 @@ updateDisenchantButtonAction = function()
       else
         macrotext = string.format("/cast %s\n/use %d %d", DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
       end
+      button:SetAttribute("useOnKeyDown", false)
       button:SetAttribute("type", "macro")
       button:SetAttribute("macrotext", macrotext)
     else
