@@ -1,15 +1,10 @@
 local ADDON_PREFIX = "[EnchantQuickDisenchant]"
-local MIDNIGHT_ENCHANTING_SPELL_ID = 2909
+local MIDNIGHT_ENCHANTING_SPELL_ID = 7411
 
 local QUALITY_UNCOMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Uncommon) or 2
 local QUALITY_RARE = (Enum and Enum.ItemQuality and Enum.ItemQuality.Rare) or 3
 local QUALITY_EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
 local QUALITY_LEGENDARY = (Enum and Enum.ItemQuality and Enum.ItemQuality.Legendary) or 5
-
-local DISENCHANT_HINTS = {
-  "可分解",
-  "分解",
-}
 
 local QUALITY_LABELS = {
   [QUALITY_UNCOMMON] = "绿色",
@@ -18,31 +13,21 @@ local QUALITY_LABELS = {
   [QUALITY_LEGENDARY] = "橙色",
 }
 
-local function containsDisenchantHint(text)
-  if type(text) ~= "string" or text == "" then
-    return false
-  end
-
-  for _, hint in ipairs(DISENCHANT_HINTS) do
-    if text:find(hint, 1, true) then
-      return true
-    end
-  end
-
-  return false
-end
-
 local function hasCurrentVersionEnchanting()
   if C_SpellBook and C_SpellBook.IsSpellKnown then
     return C_SpellBook.IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
-  if IsPlayerSpell then
-    return IsPlayerSpell(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
+  if IsSpellKnownOrOverridesKnown then
+    return IsSpellKnownOrOverridesKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
   if IsSpellKnown then
     return IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
+  end
+
+  if IsPlayerSpell then
+    return IsPlayerSpell(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
   return false
@@ -64,54 +49,25 @@ local function collectBagSlotTotals()
   return totalSlots, freeSlots
 end
 
-local function isTooltipDisenchantableByDataLines(bagID, slotID)
-  if not C_TooltipInfo or not C_TooltipInfo.GetBagItem then
-    return false
-  end
-
-  local tooltipData = C_TooltipInfo.GetBagItem(bagID, slotID)
-  if not tooltipData or not tooltipData.lines then
-    return false
-  end
-
-  for _, line in ipairs(tooltipData.lines) do
-    if containsDisenchantHint(line.leftText) or containsDisenchantHint(line.rightText) or containsDisenchantHint(line.text) then
-      return true
-    end
-  end
-
-  return false
-end
-
-local scanTooltip = CreateFrame("GameTooltip", "EnchantQuickDisenchantScanTooltip", UIParent, "GameTooltipTemplate")
-scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
-
-local function isTooltipDisenchantableByGameTooltip(bagID, slotID)
-  scanTooltip:ClearLines()
-  scanTooltip:SetBagItem(bagID, slotID)
-
-  for i = 1, scanTooltip:NumLines() do
-    local leftLine = _G["EnchantQuickDisenchantScanTooltipTextLeft" .. i]
-    local rightLine = _G["EnchantQuickDisenchantScanTooltipTextRight" .. i]
-
-    if containsDisenchantHint(leftLine and leftLine:GetText()) or containsDisenchantHint(rightLine and rightLine:GetText()) then
-      return true
-    end
-  end
-
-  return false
-end
-
-local function isDisenchantableBagItem(bagID, slotID, itemLink)
+local function isDisenchantableByRules(itemLink, quality)
   if not itemLink or not IsEquippableItem(itemLink) then
     return false
   end
 
-  if isTooltipDisenchantableByDataLines(bagID, slotID) then
-    return true
+  if quality < QUALITY_UNCOMMON or quality > QUALITY_EPIC then
+    return false
   end
 
-  return isTooltipDisenchantableByGameTooltip(bagID, slotID)
+  local _, _, _, itemEquipLoc, _, itemClassID = C_Item.GetItemInfoInstant(itemLink)
+  if not itemEquipLoc or itemEquipLoc == "" then
+    return false
+  end
+
+  if itemClassID ~= LE_ITEM_CLASS_ARMOR and itemClassID ~= LE_ITEM_CLASS_WEAPON then
+    return false
+  end
+
+  return true
 end
 
 local function collectDisenchantableCountsByQuality()
@@ -130,8 +86,8 @@ local function collectDisenchantableCountsByQuality()
       local itemInfo = C_Container.GetContainerItemInfo(bagID, slotID)
       if itemInfo and itemInfo.hyperlink then
         local quality = itemInfo.quality or 0
-        if quality >= QUALITY_UNCOMMON and isDisenchantableBagItem(bagID, slotID, itemInfo.hyperlink) then
-          local count = itemInfo.stackCount or 1
+        if isDisenchantableByRules(itemInfo.hyperlink, quality) then
+          local count = 1
           totalCount = totalCount + count
 
           if qualityCounts[quality] ~= nil then
