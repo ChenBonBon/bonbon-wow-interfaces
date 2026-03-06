@@ -392,6 +392,13 @@ local function ensureMainWindow()
   disenchantButton:SetSize(82, 22)
   disenchantButton:SetText("分解")
   disenchantButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
+  disenchantButton:EnableMouse(true)
+  if disenchantButton.SetMouseClickEnabled then
+    disenchantButton:SetMouseClickEnabled(true)
+  end
+  if disenchantButton.RegisterForClicks then
+    disenchantButton:RegisterForClicks("LeftButtonUp")
+  end
   disenchantButton.mode = "empty"
   disenchantButton.actionItem = nil
   disenchantButton:SetScript("PreClick", function(self)
