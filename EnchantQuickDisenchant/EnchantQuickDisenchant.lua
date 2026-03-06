@@ -56,6 +56,7 @@ local getQueueHeadItem
 local updateDisenchantButtonAction
 local isPendingItemUnchanged
 local buildDisenchantFailureReason
+local beginPendingDisenchant
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
@@ -118,6 +119,29 @@ end
 
 local function isDisenchantSpellcastEvent(unit, spellID)
   return unit == "player" and spellID == DISENCHANT_SPELL_ID
+end
+
+beginPendingDisenchant = function(actionItem)
+  if not actionItem then
+    return
+  end
+
+  state.pendingDisenchant = {
+    key = actionItem.key,
+    bagID = actionItem.bagID,
+    slotID = actionItem.slotID,
+    itemLink = actionItem.itemLink,
+    castState = "queued",
+    castFailureEvent = nil,
+    errorText = nil,
+  }
+
+  local pendingRef = state.pendingDisenchant
+  C_Timer.After(DISENCHANT_RESOLVE_TIMEOUT_SECONDS, function()
+    if state.pendingDisenchant == pendingRef then
+      resolvePendingDisenchant()
+    end
+  end)
 end
 
 local function getBagRangeEnd()
@@ -291,24 +315,13 @@ local function ensureMainWindow()
   disenchantButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
   disenchantButton.mode = "empty"
   disenchantButton.actionItem = nil
+  disenchantButton:SetScript("PreClick", function(self)
+    if self.mode == "armed" and self.actionItem and not state.pendingDisenchant then
+      beginPendingDisenchant(self.actionItem)
+    end
+  end)
   disenchantButton:SetScript("PostClick", function(self)
     if self.mode == "armed" and self.actionItem then
-      state.pendingDisenchant = {
-        key = self.actionItem.key,
-        bagID = self.actionItem.bagID,
-        slotID = self.actionItem.slotID,
-        itemLink = self.actionItem.itemLink,
-        castState = "queued",
-        castFailureEvent = nil,
-        errorText = nil,
-      }
-
-      local pendingRef = state.pendingDisenchant
-      C_Timer.After(DISENCHANT_RESOLVE_TIMEOUT_SECONDS, function()
-        if state.pendingDisenchant == pendingRef then
-          resolvePendingDisenchant()
-        end
-      end)
       refreshWindows()
       return
     end
