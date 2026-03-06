@@ -28,7 +28,7 @@ local mainUI = {
   scrollFrame = nil,
   contentFrame = nil,
   emptyText = nil,
-  plusButton = nil,
+  gridPlusButton = nil,
   itemButtons = {},
 }
 
@@ -186,20 +186,20 @@ local function ensureMainWindow()
     end
   end)
 
-  local plusButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  local plusButton = CreateFrame("Button", nil, contentFrame, "UIPanelButtonTemplate")
   plusButton:SetSize(20, 20)
   plusButton:SetText("+")
-  plusButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -32, -8)
   plusButton:SetScript("OnClick", function()
     toggleCandidateWindow()
   end)
+  plusButton:Hide()
 
   mainUI.frame = frame
   mainUI.titleText = titleText
   mainUI.scrollFrame = scrollFrame
   mainUI.contentFrame = contentFrame
   mainUI.emptyText = emptyText
-  mainUI.plusButton = plusButton
+  mainUI.gridPlusButton = plusButton
 end
 
 local function ensureCandidateWindow()
@@ -332,6 +332,21 @@ local function refreshMainWindow()
 
   local selectedItems = getSelectedItems()
   renderGrid(mainUI, selectedItems, onMainItemClick)
+
+  local plusIndex = #selectedItems + 1
+  local plusColumn = (plusIndex - 1) % COLUMNS
+  local plusRow = math.floor((plusIndex - 1) / COLUMNS)
+  mainUI.gridPlusButton:ClearAllPoints()
+  mainUI.gridPlusButton:SetPoint("TOPLEFT", mainUI.contentFrame, "TOPLEFT", plusColumn * (ICON_SIZE + ICON_GAP), -plusRow * (ICON_SIZE + ICON_GAP))
+  mainUI.gridPlusButton:Show()
+
+  local slotCount = #selectedItems + 1
+  local rowCount = math.max(1, math.ceil(slotCount / COLUMNS))
+  local contentHeight = (rowCount * ICON_SIZE) + ((rowCount - 1) * ICON_GAP)
+  mainUI.contentFrame:SetSize(CONTENT_WIDTH, contentHeight)
+  mainUI.emptyText:SetShown(#selectedItems == 0)
+  mainUI.scrollFrame:SetVerticalScroll(0)
+
   mainUI.titleText:SetText(string.format("附魔快速分解 (%d)", #selectedItems))
 end
 
