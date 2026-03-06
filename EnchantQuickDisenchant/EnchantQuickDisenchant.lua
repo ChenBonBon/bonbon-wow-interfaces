@@ -20,6 +20,7 @@ local VISIBLE_CONTENT_HEIGHT = (VISIBLE_ROWS * ICON_SIZE) + ((VISIBLE_ROWS - 1) 
 local WINDOW_WIDTH = CONTENT_WIDTH + 56
 local WINDOW_HEIGHT = VISIBLE_CONTENT_HEIGHT + 60
 local DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 6.0
+local PRINT_DUMP_MAX_DEPTH = 4
 
 local state = {
   allItems = {},
@@ -57,6 +58,84 @@ local updateDisenchantButtonAction
 local isPendingItemUnchanged
 local buildDisenchantFailureReason
 local beginPendingDisenchant
+
+local function dumpValue(value, depth, seen)
+  local valueType = type(value)
+
+  if valueType == "string" then
+    return string.format("%q", value)
+  end
+
+  if valueType == "number" or valueType == "boolean" or valueType == "nil" then
+    return tostring(value)
+  end
+
+  if valueType ~= "table" then
+    return string.format("<%s:%s>", valueType, tostring(value))
+  end
+
+  if seen[value] then
+    return "<cycle>"
+  end
+
+  if depth <= 0 then
+    return "{...}"
+  end
+
+  seen[value] = true
+
+  local keys = {}
+  for key in pairs(value) do
+    table.insert(keys, key)
+  end
+
+  table.sort(keys, function(a, b)
+    local typeA = type(a)
+    local typeB = type(b)
+    if typeA ~= typeB then
+      return typeA < typeB
+    end
+
+    if typeA == "number" or typeA == "string" then
+      return a < b
+    end
+
+    return tostring(a) < tostring(b)
+  end)
+
+  local parts = {}
+  for _, key in ipairs(keys) do
+    local keyType = type(key)
+    local keyText
+    if keyType == "string" and key:match("^[_%a][_%w]*$") then
+      keyText = key
+    else
+      keyText = "[" .. dumpValue(key, depth - 1, seen) .. "]"
+    end
+
+    local valueText = dumpValue(value[key], depth - 1, seen)
+    table.insert(parts, string.format("%s=%s", keyText, valueText))
+  end
+
+  seen[value] = nil
+  return "{" .. table.concat(parts, ", ") .. "}"
+end
+
+local function print_dump(...)
+  local argCount = select("#", ...)
+  if argCount == 0 then
+    print(string.format("%s [dump] <no args>", ADDON_PREFIX))
+    return
+  end
+
+  for i = 1, argCount do
+    local value = select(i, ...)
+    local text = dumpValue(value, PRINT_DUMP_MAX_DEPTH, {})
+    print(string.format("%s [dump %d/%d] %s", ADDON_PREFIX, i, argCount, text))
+  end
+end
+
+_G.print_dump = print_dump
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
