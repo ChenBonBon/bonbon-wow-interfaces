@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: QuickDisenchant
-## Notes: Scan and manage disenchantable equipment via /eqd.
-## Author: Codex
+## Notes:  使用 /eqd 唤出可分解装备窗口，选择需要分解的装备快速分解。
+## Author: BonBon Chen
 ## Version: 1.0.0
 
 QuickDisenchant.lua
