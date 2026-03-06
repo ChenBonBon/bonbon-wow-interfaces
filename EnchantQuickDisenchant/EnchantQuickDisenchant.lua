@@ -260,11 +260,16 @@ local function collectDisenchantableItems()
       if itemInfo and itemInfo.hyperlink then
         local quality = itemInfo.quality or 0
         if isDisenchantableByRules(itemInfo.hyperlink, quality) then
+          local itemID = itemInfo.itemID
+          if not itemID and C_Item and C_Item.GetItemInfoInstant then
+            itemID = C_Item.GetItemInfoInstant(itemInfo.hyperlink)
+          end
           local key = string.format("%d:%d", bagID, slotID)
           local itemData = {
             key = key,
             bagID = bagID,
             slotID = slotID,
+            itemID = itemID,
             itemLink = itemInfo.hyperlink,
             iconFileID = itemInfo.iconFileID,
             quality = quality,
@@ -560,7 +565,17 @@ updateDisenchantButtonAction = function()
 
   if not (InCombatLockdown and InCombatLockdown()) then
     if mode == "armed" and actionItem then
-      local macrotext = string.format("/cast %s\n/use %d %d", DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
+      local actionItemID = actionItem.itemID
+      if not actionItemID and C_Item and C_Item.GetItemInfoInstant then
+        actionItemID = C_Item.GetItemInfoInstant(actionItem.itemLink)
+      end
+
+      local macrotext
+      if actionItemID then
+        macrotext = string.format("/cast %s\n/use item:%d", DISENCHANT_SPELL_NAME, actionItemID)
+      else
+        macrotext = string.format("/cast %s\n/use %d %d", DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
+      end
       button:SetAttribute("type", "macro")
       button:SetAttribute("macrotext", macrotext)
     else
