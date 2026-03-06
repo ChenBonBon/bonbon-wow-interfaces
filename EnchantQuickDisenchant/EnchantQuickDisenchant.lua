@@ -1,6 +1,7 @@
 local ADDON_PREFIX = "[EnchantQuickDisenchant]"
 local MIDNIGHT_ENCHANTING_SPELL_ID = 7411
 local DISENCHANT_SPELL_ID = 13262
+local DISENCHANT_SPELL_NAME = (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(DISENCHANT_SPELL_ID)) or (GetSpellInfo and GetSpellInfo(DISENCHANT_SPELL_ID)) or "分解"
 
 local QUALITY_UNCOMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Uncommon) or 2
 local QUALITY_EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
@@ -50,7 +51,9 @@ local candidateUI = {
 local refreshWindows
 local toggleCandidateWindow
 local resolvePendingDisenchant
-local tryDisenchantQueueHead
+local syncSelectionWithCurrentBags
+local getQueueHeadItem
+local updateDisenchantButtonAction
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
@@ -276,12 +279,46 @@ local function ensureMainWindow()
   end)
   plusButton:Hide()
 
-  local disenchantButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  local disenchantButton = CreateFrame("Button", nil, frame, "SecureActionButtonTemplate,UIPanelButtonTemplate")
   disenchantButton:SetSize(82, 22)
   disenchantButton:SetText("分解")
   disenchantButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
-  disenchantButton:SetScript("OnClick", function()
-    tryDisenchantQueueHead()
+  disenchantButton.mode = "empty"
+  disenchantButton.actionItem = nil
+  disenchantButton:SetScript("PostClick", function(self)
+    if self.mode == "armed" and self.actionItem then
+      state.pendingDisenchant = {
+        key = self.actionItem.key,
+        bagID = self.actionItem.bagID,
+        slotID = self.actionItem.slotID,
+        itemLink = self.actionItem.itemLink,
+      }
+
+      local pendingRef = state.pendingDisenchant
+      C_Timer.After(DISENCHANT_RESOLVE_TIMEOUT_SECONDS, function()
+        if state.pendingDisenchant == pendingRef then
+          resolvePendingDisenchant()
+        end
+      end)
+      refreshWindows()
+      return
+    end
+
+    if self.mode == "missing_spell" then
+      print(string.format("%s 未学习分解技能。", ADDON_PREFIX))
+    elseif self.mode == "empty" then
+      print(string.format("%s 当前无可分解装备。", ADDON_PREFIX))
+    elseif self.mode == "busy" then
+      print(string.format("%s 正在处理上一件，请稍候。", ADDON_PREFIX))
+    elseif self.mode == "invalid_target" then
+      syncSelectionWithCurrentBags()
+      refreshWindows()
+      print(string.format("%s 目标已失效，请重试。", ADDON_PREFIX))
+    elseif self.mode == "combat" then
+      print(string.format("%s 战斗中无法更新分解动作。", ADDON_PREFIX))
+    else
+      print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    end
   end)
 
   mainUI.frame = frame
@@ -362,7 +399,7 @@ local function getSelectedItems()
   return selectedItems
 end
 
-local function syncSelectionWithCurrentBags()
+syncSelectionWithCurrentBags = function()
   local items, itemsByKey = collectDisenchantableItems()
   local newSelectedKeys = {}
 
@@ -377,9 +414,62 @@ local function syncSelectionWithCurrentBags()
   state.selectedKeys = newSelectedKeys
 end
 
-local function getQueueHeadItem()
+getQueueHeadItem = function()
   local selectedItems = getSelectedItems()
   return selectedItems[1]
+end
+
+updateDisenchantButtonAction = function()
+  if not mainUI.disenchantButton then
+    return
+  end
+
+  local button = mainUI.disenchantButton
+  local mode = "empty"
+  local actionItem = nil
+
+  if state.pendingDisenchant then
+    mode = "busy"
+  elseif not hasDisenchantSpell() then
+    mode = "missing_spell"
+  else
+    actionItem = getQueueHeadItem()
+    if not actionItem then
+      mode = "empty"
+    else
+      local itemInfo = C_Container.GetContainerItemInfo(actionItem.bagID, actionItem.slotID)
+      if itemInfo and itemInfo.hyperlink == actionItem.itemLink then
+        mode = "armed"
+      else
+        mode = "invalid_target"
+        actionItem = nil
+      end
+    end
+  end
+
+  button.mode = mode
+  button.actionItem = actionItem
+
+  if not (InCombatLockdown and InCombatLockdown()) then
+    if mode == "armed" and actionItem then
+      local macrotext = string.format("/cast %s\n/use %d %d", DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
+      button:SetAttribute("type", "macro")
+      button:SetAttribute("macrotext", macrotext)
+    else
+      button:SetAttribute("type", nil)
+      button:SetAttribute("macrotext", nil)
+    end
+  elseif mode ~= "armed" then
+    button.mode = "combat"
+  end
+
+  if mode == "busy" then
+    button:SetText("处理中")
+  else
+    button:SetText("分解")
+  end
+
+  button:SetEnabled(mode == "armed")
 end
 
 local function renderGrid(uiSet, items, onClick, isDisabled)
@@ -460,82 +550,6 @@ resolvePendingDisenchant = function()
   print(string.format("%s 已尝试分解：%s", ADDON_PREFIX, pending.itemLink or "物品"))
 end
 
-tryDisenchantQueueHead = function()
-  if state.pendingDisenchant then
-    print(string.format("%s 正在处理上一件，请稍候。", ADDON_PREFIX))
-    return
-  end
-
-  if not hasDisenchantSpell() then
-    print(string.format("%s 未学习分解技能。", ADDON_PREFIX))
-    return
-  end
-
-  local queueHead = getQueueHeadItem()
-  if not queueHead then
-    print(string.format("%s 当前无可分解装备。", ADDON_PREFIX))
-    return
-  end
-
-  local itemInfo = C_Container.GetContainerItemInfo(queueHead.bagID, queueHead.slotID)
-  if not itemInfo or itemInfo.hyperlink ~= queueHead.itemLink then
-    syncSelectionWithCurrentBags()
-    refreshWindows()
-    print(string.format("%s 目标已失效，请重试。", ADDON_PREFIX))
-    return
-  end
-
-  local castOk = false
-  if CastSpellByID then
-    castOk = pcall(CastSpellByID, DISENCHANT_SPELL_ID)
-  elseif CastSpellByName then
-    castOk = pcall(CastSpellByName, "分解")
-  end
-
-  if not castOk then
-    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
-    return
-  end
-
-  if SpellIsTargeting and not SpellIsTargeting() then
-    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
-    return
-  end
-
-  local useOk = false
-  if C_Container and C_Container.UseContainerItem then
-    useOk = pcall(C_Container.UseContainerItem, queueHead.bagID, queueHead.slotID)
-  end
-
-  if not useOk then
-    if SpellStopTargeting and SpellIsTargeting and SpellIsTargeting() then
-      SpellStopTargeting()
-    end
-    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
-    return
-  end
-
-  if SpellIsTargeting and SpellIsTargeting() then
-    SpellStopTargeting()
-    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
-    return
-  end
-
-  state.pendingDisenchant = {
-    key = queueHead.key,
-    bagID = queueHead.bagID,
-    slotID = queueHead.slotID,
-    itemLink = queueHead.itemLink,
-  }
-
-  local pendingRef = state.pendingDisenchant
-  C_Timer.After(DISENCHANT_RESOLVE_TIMEOUT_SECONDS, function()
-    if state.pendingDisenchant == pendingRef then
-      resolvePendingDisenchant()
-    end
-  end)
-end
-
 local function refreshMainWindow()
   ensureMainWindow()
 
@@ -555,7 +569,7 @@ local function refreshMainWindow()
   mainUI.contentFrame:SetSize(CONTENT_WIDTH, contentHeight)
   mainUI.emptyText:SetShown(#selectedItems == 0)
   mainUI.scrollFrame:SetVerticalScroll(0)
-  mainUI.disenchantButton:SetEnabled(#selectedItems > 0 and state.pendingDisenchant == nil)
+  updateDisenchantButtonAction()
 
   mainUI.titleText:SetText(string.format("可分解装备 (%d)", #selectedItems))
 end
