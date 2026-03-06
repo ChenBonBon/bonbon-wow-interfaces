@@ -16,7 +16,23 @@ local VISIBLE_CONTENT_HEIGHT = (VISIBLE_ROWS * ICON_SIZE) + ((VISIBLE_ROWS - 1) 
 local WINDOW_WIDTH = CONTENT_WIDTH + 56
 local WINDOW_HEIGHT = VISIBLE_CONTENT_HEIGHT + 60
 
-local ui = {
+local state = {
+  allItems = {},
+  allItemsByKey = {},
+  selectedKeys = {},
+}
+
+local mainUI = {
+  frame = nil,
+  titleText = nil,
+  scrollFrame = nil,
+  contentFrame = nil,
+  emptyText = nil,
+  plusButton = nil,
+  itemButtons = {},
+}
+
+local candidateUI = {
   frame = nil,
   titleText = nil,
   scrollFrame = nil,
@@ -24,6 +40,9 @@ local ui = {
   emptyText = nil,
   itemButtons = {},
 }
+
+local refreshWindows
+local toggleCandidateWindow
 
 local function hasCurrentVersionEnchanting()
   if C_SpellBook and C_SpellBook.IsSpellKnown then
@@ -72,6 +91,7 @@ end
 
 local function collectDisenchantableItems()
   local items = {}
+  local itemsByKey = {}
 
   for bagID = 0, getBagRangeEnd() do
     local slots = C_Container.GetContainerNumSlots(bagID) or 0
@@ -81,11 +101,17 @@ local function collectDisenchantableItems()
       if itemInfo and itemInfo.hyperlink then
         local quality = itemInfo.quality or 0
         if isDisenchantableByRules(itemInfo.hyperlink, quality) then
-          table.insert(items, {
+          local key = string.format("%d:%d", bagID, slotID)
+          local itemData = {
+            key = key,
+            bagID = bagID,
+            slotID = slotID,
             itemLink = itemInfo.hyperlink,
             iconFileID = itemInfo.iconFileID,
             quality = quality,
-          })
+          }
+          table.insert(items, itemData)
+          itemsByKey[key] = itemData
         end
       end
     end
@@ -96,20 +122,15 @@ local function collectDisenchantableItems()
       return a.quality > b.quality
     end
 
-    return a.itemLink < b.itemLink
+    return tostring(a.itemLink) < tostring(b.itemLink)
   end)
 
-  return items
+  return items, itemsByKey
 end
 
-local function ensureWindow()
-  if ui.frame then
-    return
-  end
-
-  local frame = CreateFrame("Frame", "EnchantQuickDisenchantWindow", UIParent, "BackdropTemplate")
+local function createWindowFrame(frameName)
+  local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
   frame:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
-  frame:SetPoint("CENTER")
   frame:SetFrameStrata("MEDIUM")
   frame:SetMovable(true)
   frame:EnableMouse(true)
@@ -136,7 +157,6 @@ local function ensureWindow()
 
   local titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   titleText:SetPoint("TOP", frame, "TOP", 0, -10)
-  titleText:SetText("附魔快速分解")
 
   local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
   scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -30)
@@ -150,19 +170,59 @@ local function ensureWindow()
   emptyText:SetPoint("CENTER", contentFrame, "CENTER", 0, 0)
   emptyText:SetText("未找到可分解装备")
 
-  ui.frame = frame
-  ui.titleText = titleText
-  ui.scrollFrame = scrollFrame
-  ui.contentFrame = contentFrame
-  ui.emptyText = emptyText
+  return frame, titleText, scrollFrame, contentFrame, emptyText
 end
 
-local function ensureItemButton(index)
-  if ui.itemButtons[index] then
-    return ui.itemButtons[index]
+local function ensureMainWindow()
+  if mainUI.frame then
+    return
   end
 
-  local button = CreateFrame("Button", nil, ui.contentFrame)
+  local frame, titleText, scrollFrame, contentFrame, emptyText = createWindowFrame("EnchantQuickDisenchantWindow")
+  frame:SetPoint("CENTER")
+  frame:SetScript("OnHide", function()
+    if candidateUI.frame then
+      candidateUI.frame:Hide()
+    end
+  end)
+
+  local plusButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  plusButton:SetSize(20, 20)
+  plusButton:SetText("+")
+  plusButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -32, -8)
+  plusButton:SetScript("OnClick", function()
+    toggleCandidateWindow()
+  end)
+
+  mainUI.frame = frame
+  mainUI.titleText = titleText
+  mainUI.scrollFrame = scrollFrame
+  mainUI.contentFrame = contentFrame
+  mainUI.emptyText = emptyText
+  mainUI.plusButton = plusButton
+end
+
+local function ensureCandidateWindow()
+  if candidateUI.frame then
+    return
+  end
+
+  local frame, titleText, scrollFrame, contentFrame, emptyText = createWindowFrame("EnchantQuickDisenchantCandidateWindow")
+  titleText:SetText("可添加装备")
+
+  candidateUI.frame = frame
+  candidateUI.titleText = titleText
+  candidateUI.scrollFrame = scrollFrame
+  candidateUI.contentFrame = contentFrame
+  candidateUI.emptyText = emptyText
+end
+
+local function ensureGridButton(uiSet, index, onClick)
+  if uiSet.itemButtons[index] then
+    return uiSet.itemButtons[index]
+  end
+
+  local button = CreateFrame("Button", nil, uiSet.contentFrame)
   button:SetSize(ICON_SIZE, ICON_SIZE)
 
   local icon = button:CreateTexture(nil, "ARTWORK")
@@ -175,6 +235,7 @@ local function ensureItemButton(index)
   border:SetAlpha(0.3)
   border:SetPoint("CENTER")
   border:SetSize(ICON_SIZE + 20, ICON_SIZE + 20)
+  button.border = border
 
   button:SetScript("OnEnter", function(self)
     if not self.itemLink then
@@ -190,39 +251,142 @@ local function ensureItemButton(index)
     GameTooltip:Hide()
   end)
 
-  ui.itemButtons[index] = button
+  button:SetScript("OnClick", function(self, mouseButton)
+    onClick(self, mouseButton)
+  end)
+
+  uiSet.itemButtons[index] = button
   return button
 end
 
-local function renderItems(items)
-  ensureWindow()
+local function getSelectedItems()
+  local selectedItems = {}
 
+  for _, item in ipairs(state.allItems) do
+    if state.selectedKeys[item.key] then
+      table.insert(selectedItems, item)
+    end
+  end
+
+  return selectedItems
+end
+
+local function renderGrid(uiSet, items, onClick, isDisabled)
   for index, item in ipairs(items) do
-    local button = ensureItemButton(index)
+    local button = ensureGridButton(uiSet, index, onClick)
     local column = (index - 1) % COLUMNS
     local row = math.floor((index - 1) / COLUMNS)
+    local disabled = isDisabled and isDisabled(item) or false
 
     button:ClearAllPoints()
-    button:SetPoint("TOPLEFT", ui.contentFrame, "TOPLEFT", column * (ICON_SIZE + ICON_GAP), -row * (ICON_SIZE + ICON_GAP))
+    button:SetPoint("TOPLEFT", uiSet.contentFrame, "TOPLEFT", column * (ICON_SIZE + ICON_GAP), -row * (ICON_SIZE + ICON_GAP))
     button.icon:SetTexture(item.iconFileID or 134400)
+    button.icon:SetDesaturated(disabled)
+    button.icon:SetAlpha(disabled and 0.35 or 1)
+    button.border:SetAlpha(disabled and 0.12 or 0.3)
+    button.itemKey = item.key
     button.itemLink = item.itemLink
+    button.isDisabled = disabled
     button:Show()
   end
 
-  for index = #items + 1, #ui.itemButtons do
-    local button = ui.itemButtons[index]
+  for index = #items + 1, #uiSet.itemButtons do
+    local button = uiSet.itemButtons[index]
+    button.itemKey = nil
     button.itemLink = nil
+    button.isDisabled = false
     button:Hide()
   end
 
   local rowCount = math.max(1, math.ceil(#items / COLUMNS))
   local contentHeight = (rowCount * ICON_SIZE) + ((rowCount - 1) * ICON_GAP)
-  ui.contentFrame:SetSize(CONTENT_WIDTH, contentHeight)
-  ui.emptyText:SetShown(#items == 0)
+  uiSet.contentFrame:SetSize(CONTENT_WIDTH, contentHeight)
+  uiSet.emptyText:SetShown(#items == 0)
+  uiSet.scrollFrame:SetVerticalScroll(0)
+end
 
-  ui.titleText:SetText(string.format("附魔快速分解 (%d)", #items))
-  ui.scrollFrame:SetVerticalScroll(0)
-  ui.frame:Show()
+local function onMainItemClick(self)
+  if not self.itemKey or not state.selectedKeys[self.itemKey] then
+    return
+  end
+
+  state.selectedKeys[self.itemKey] = nil
+  refreshWindows()
+end
+
+local function onCandidateItemClick(self)
+  if not self.itemKey or self.isDisabled then
+    return
+  end
+
+  if not state.allItemsByKey[self.itemKey] then
+    return
+  end
+
+  state.selectedKeys[self.itemKey] = true
+  refreshWindows()
+end
+
+local function refreshMainWindow()
+  ensureMainWindow()
+
+  local selectedItems = getSelectedItems()
+  renderGrid(mainUI, selectedItems, onMainItemClick)
+  mainUI.titleText:SetText(string.format("附魔快速分解 (%d)", #selectedItems))
+end
+
+local function refreshCandidateWindow()
+  ensureCandidateWindow()
+
+  local total = #state.allItems
+  local selectedCount = 0
+  for _, item in ipairs(state.allItems) do
+    if state.selectedKeys[item.key] then
+      selectedCount = selectedCount + 1
+    end
+  end
+
+  renderGrid(candidateUI, state.allItems, onCandidateItemClick, function(item)
+    return state.selectedKeys[item.key] and true or false
+  end)
+
+  candidateUI.titleText:SetText(string.format("可添加装备 (%d/%d)", total - selectedCount, total))
+end
+
+refreshWindows = function()
+  if mainUI.frame and mainUI.frame:IsShown() then
+    refreshMainWindow()
+  end
+
+  if candidateUI.frame and candidateUI.frame:IsShown() then
+    refreshCandidateWindow()
+  end
+end
+
+toggleCandidateWindow = function()
+  if not mainUI.frame or not mainUI.frame:IsShown() then
+    return
+  end
+
+  ensureCandidateWindow()
+
+  if candidateUI.frame:IsShown() then
+    candidateUI.frame:Hide()
+    return
+  end
+
+  candidateUI.frame:ClearAllPoints()
+  candidateUI.frame:SetPoint("TOPLEFT", mainUI.frame, "TOPRIGHT", 12, 0)
+  refreshCandidateWindow()
+  candidateUI.frame:Show()
+end
+
+local function resetSelectionToAllItems()
+  state.selectedKeys = {}
+
+  for _, item in ipairs(state.allItems) do
+    state.selectedKeys[item.key] = true
+  end
 end
 
 local function runScan()
@@ -231,8 +395,18 @@ local function runScan()
     return
   end
 
-  local items = collectDisenchantableItems()
-  renderItems(items)
+  local items, itemsByKey = collectDisenchantableItems()
+  state.allItems = items
+  state.allItemsByKey = itemsByKey
+  resetSelectionToAllItems()
+
+  ensureMainWindow()
+  refreshMainWindow()
+  mainUI.frame:Show()
+
+  if candidateUI.frame then
+    candidateUI.frame:Hide()
+  end
 end
 
 SLASH_EQD1 = "/eqd"
