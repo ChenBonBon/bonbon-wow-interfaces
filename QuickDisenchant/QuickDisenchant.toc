@@ -1,0 +1,7 @@
+## Interface: 120001
+## Title: QuickDisenchant
+## Notes: Scan and manage disenchantable equipment via /eqd.
+## Author: Codex
+## Version: 1.0.0
+
+QuickDisenchant.lua
