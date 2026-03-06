@@ -19,7 +19,7 @@ local CONTENT_WIDTH = (COLUMNS * ICON_SIZE) + ((COLUMNS - 1) * ICON_GAP)
 local VISIBLE_CONTENT_HEIGHT = (VISIBLE_ROWS * ICON_SIZE) + ((VISIBLE_ROWS - 1) * ICON_GAP)
 local WINDOW_WIDTH = CONTENT_WIDTH + 56
 local WINDOW_HEIGHT = VISIBLE_CONTENT_HEIGHT + 60
-local DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 0.8
+local DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 6.0
 
 local state = {
   allItems = {},
@@ -54,6 +54,8 @@ local resolvePendingDisenchant
 local syncSelectionWithCurrentBags
 local getQueueHeadItem
 local updateDisenchantButtonAction
+local isPendingItemUnchanged
+local buildDisenchantFailureReason
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
@@ -112,6 +114,10 @@ local function hasDisenchantSpell()
   end
 
   return false
+end
+
+local function isDisenchantSpellcastEvent(unit, spellID)
+  return unit == "player" and spellID == DISENCHANT_SPELL_ID
 end
 
 local function getBagRangeEnd()
@@ -292,6 +298,9 @@ local function ensureMainWindow()
         bagID = self.actionItem.bagID,
         slotID = self.actionItem.slotID,
         itemLink = self.actionItem.itemLink,
+        castState = "queued",
+        castFailureEvent = nil,
+        errorText = nil,
       }
 
       local pendingRef = state.pendingDisenchant
@@ -536,11 +545,10 @@ resolvePendingDisenchant = function()
 
   state.pendingDisenchant = nil
 
-  local currentInfo = C_Container.GetContainerItemInfo(pending.bagID, pending.slotID)
-  local isSameItem = currentInfo and currentInfo.hyperlink == pending.itemLink
+  local isSameItem = isPendingItemUnchanged(pending)
 
   if isSameItem then
-    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    print(string.format("%s 分解失败：%s", ADDON_PREFIX, buildDisenchantFailureReason(pending)))
     refreshWindows()
     return
   end
@@ -548,6 +556,47 @@ resolvePendingDisenchant = function()
   state.selectedKeys[pending.key] = nil
   refreshWindows()
   print(string.format("%s 已尝试分解：%s", ADDON_PREFIX, pending.itemLink or "物品"))
+end
+
+isPendingItemUnchanged = function(pending)
+  if not pending then
+    return false
+  end
+
+  local currentInfo = C_Container.GetContainerItemInfo(pending.bagID, pending.slotID)
+  return currentInfo and currentInfo.hyperlink == pending.itemLink
+end
+
+buildDisenchantFailureReason = function(pending)
+  if pending.errorText and pending.errorText ~= "" then
+    return pending.errorText
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_FAILED" then
+    return "施法失败。"
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_FAILED_QUIET" then
+    return "施法条件不满足。"
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_INTERRUPTED" then
+    return "施法被打断。"
+  end
+
+  if pending.castState == "casting" then
+    return string.format("施法尚未完成（%.1f 秒内无结果）。", DISENCHANT_RESOLVE_TIMEOUT_SECONDS)
+  end
+
+  if pending.castState == "succeeded" then
+    return "施法完成但目标物品未变化，可能该装备当前不可分解。"
+  end
+
+  if pending.castState == "stopped" then
+    return "施法已停止。"
+  end
+
+  return "未进入可用的分解施法状态。"
 end
 
 local function refreshMainWindow()
@@ -651,9 +700,69 @@ end
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
-eventFrame:SetScript("OnEvent", function(_, event)
-  if event == "BAG_UPDATE_DELAYED" and state.pendingDisenchant then
+eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+eventFrame:SetScript("OnEvent", function(_, event, ...)
+  local pending = state.pendingDisenchant
+  if not pending then
+    return
+  end
+
+  if event == "BAG_UPDATE_DELAYED" then
+    local unchanged = isPendingItemUnchanged(pending)
+    if not unchanged then
+      resolvePendingDisenchant()
+      return
+    end
+
+    if pending.errorText or pending.castFailureEvent then
+      resolvePendingDisenchant()
+    end
+    return
+  end
+
+  if event == "UI_ERROR_MESSAGE" then
+    local _, errorText = ...
+    if type(errorText) == "string" and errorText ~= "" then
+      pending.errorText = errorText
+    end
+    return
+  end
+
+  local unit, _, spellID = ...
+  if not isDisenchantSpellcastEvent(unit, spellID) then
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_START" then
+    pending.castState = "casting"
+    pending.castFailureEvent = nil
+    pending.errorText = nil
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_SUCCEEDED" then
+    pending.castState = "succeeded"
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_STOP" then
+    if pending.castState ~= "succeeded" then
+      pending.castState = "stopped"
+    end
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET" or event == "UNIT_SPELLCAST_INTERRUPTED" then
+    pending.castState = "failed"
+    pending.castFailureEvent = event
     resolvePendingDisenchant()
+    return
   end
 end)
 
