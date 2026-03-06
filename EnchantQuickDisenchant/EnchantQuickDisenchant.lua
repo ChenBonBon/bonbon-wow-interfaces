@@ -44,6 +44,25 @@ local candidateUI = {
 local refreshWindows
 local toggleCandidateWindow
 
+local function registerEscClosableFrame(frame)
+  if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
+    return
+  end
+
+  local frameName = frame:GetName()
+  if not frameName then
+    return
+  end
+
+  for _, existingName in ipairs(UISpecialFrames) do
+    if existingName == frameName then
+      return
+    end
+  end
+
+  table.insert(UISpecialFrames, frameName)
+end
+
 local function hasCurrentVersionEnchanting()
   if C_SpellBook and C_SpellBook.IsSpellKnown then
     return C_SpellBook.IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
@@ -180,15 +199,35 @@ local function ensureMainWindow()
 
   local frame, titleText, scrollFrame, contentFrame, emptyText = createWindowFrame("EnchantQuickDisenchantWindow")
   frame:SetPoint("CENTER")
+  registerEscClosableFrame(frame)
   frame:SetScript("OnHide", function()
     if candidateUI.frame then
       candidateUI.frame:Hide()
     end
   end)
 
-  local plusButton = CreateFrame("Button", nil, contentFrame, "UIPanelButtonTemplate")
-  plusButton:SetSize(20, 20)
-  plusButton:SetText("+")
+  local plusButton = CreateFrame("Button", nil, contentFrame)
+  plusButton:SetSize(ICON_SIZE, ICON_SIZE)
+  plusButton:SetNormalAtlas("itemupgrade_greenplusicon")
+  plusButton:SetPushedAtlas("itemupgrade_greenplusicon_pressed")
+
+  local plusGlow = plusButton:CreateTexture(nil, "OVERLAY")
+  plusGlow:SetAtlas("itemupgrade_fx_slotinnerglow")
+  plusGlow:SetPoint("CENTER")
+  plusGlow:SetSize(ICON_SIZE + 18, ICON_SIZE + 18)
+  plusGlow:SetAlpha(0.8)
+
+  local plusBorder = plusButton:CreateTexture(nil, "OVERLAY", nil, 1)
+  plusBorder:SetAtlas("itemupgrade_slotborder")
+  plusBorder:SetPoint("CENTER")
+  plusBorder:SetSize(ICON_SIZE + 18, ICON_SIZE + 18)
+
+  plusButton:SetScript("OnEnter", function()
+    plusGlow:SetAlpha(1)
+  end)
+  plusButton:SetScript("OnLeave", function()
+    plusGlow:SetAlpha(0.8)
+  end)
   plusButton:SetScript("OnClick", function()
     toggleCandidateWindow()
   end)
@@ -347,7 +386,7 @@ local function refreshMainWindow()
   mainUI.emptyText:SetShown(#selectedItems == 0)
   mainUI.scrollFrame:SetVerticalScroll(0)
 
-  mainUI.titleText:SetText(string.format("附魔快速分解 (%d)", #selectedItems))
+  mainUI.titleText:SetText(string.format("可分解装备 (%d)", #selectedItems))
 end
 
 local function refreshCandidateWindow()
