@@ -1,0 +1,7 @@
+## Interface: 120001
+## Title: Bag Slot Counter
+## Notes: Print total and free bag slots on login.
+## Author: Codex
+## Version: 1.0.0
+
+BagSlotCounter.lua
