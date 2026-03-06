@@ -1,5 +1,6 @@
 local ADDON_PREFIX = "[EnchantQuickDisenchant]"
 local MIDNIGHT_ENCHANTING_SPELL_ID = 7411
+local DISENCHANT_SPELL_ID = 13262
 
 local QUALITY_UNCOMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Uncommon) or 2
 local QUALITY_EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
@@ -17,11 +18,13 @@ local CONTENT_WIDTH = (COLUMNS * ICON_SIZE) + ((COLUMNS - 1) * ICON_GAP)
 local VISIBLE_CONTENT_HEIGHT = (VISIBLE_ROWS * ICON_SIZE) + ((VISIBLE_ROWS - 1) * ICON_GAP)
 local WINDOW_WIDTH = CONTENT_WIDTH + 56
 local WINDOW_HEIGHT = VISIBLE_CONTENT_HEIGHT + 60
+local DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 0.8
 
 local state = {
   allItems = {},
   allItemsByKey = {},
   selectedKeys = {},
+  pendingDisenchant = nil,
 }
 
 local mainUI = {
@@ -31,6 +34,7 @@ local mainUI = {
   contentFrame = nil,
   emptyText = nil,
   gridPlusButton = nil,
+  disenchantButton = nil,
   itemButtons = {},
 }
 
@@ -45,6 +49,8 @@ local candidateUI = {
 
 local refreshWindows
 local toggleCandidateWindow
+local resolvePendingDisenchant
+local tryDisenchantQueueHead
 
 local function registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
@@ -80,6 +86,26 @@ local function hasCurrentVersionEnchanting()
 
   if IsPlayerSpell then
     return IsPlayerSpell(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
+  end
+
+  return false
+end
+
+local function hasDisenchantSpell()
+  if C_SpellBook and C_SpellBook.IsSpellKnown then
+    return C_SpellBook.IsSpellKnown(DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsSpellKnownOrOverridesKnown then
+    return IsSpellKnownOrOverridesKnown(DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsSpellKnown then
+    return IsSpellKnown(DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsPlayerSpell then
+    return IsPlayerSpell(DISENCHANT_SPELL_ID) and true or false
   end
 
   return false
@@ -208,6 +234,10 @@ local function ensureMainWindow()
     end
   end)
 
+  scrollFrame:ClearAllPoints()
+  scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -30)
+  scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 40)
+
   local plusButton = CreateFrame("Button", nil, contentFrame)
   plusButton:SetSize(ICON_SIZE, ICON_SIZE)
 
@@ -246,12 +276,21 @@ local function ensureMainWindow()
   end)
   plusButton:Hide()
 
+  local disenchantButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+  disenchantButton:SetSize(82, 22)
+  disenchantButton:SetText("分解")
+  disenchantButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
+  disenchantButton:SetScript("OnClick", function()
+    tryDisenchantQueueHead()
+  end)
+
   mainUI.frame = frame
   mainUI.titleText = titleText
   mainUI.scrollFrame = scrollFrame
   mainUI.contentFrame = contentFrame
   mainUI.emptyText = emptyText
   mainUI.gridPlusButton = plusButton
+  mainUI.disenchantButton = disenchantButton
 end
 
 local function ensureCandidateWindow()
@@ -323,6 +362,26 @@ local function getSelectedItems()
   return selectedItems
 end
 
+local function syncSelectionWithCurrentBags()
+  local items, itemsByKey = collectDisenchantableItems()
+  local newSelectedKeys = {}
+
+  for key in pairs(state.selectedKeys) do
+    if itemsByKey[key] then
+      newSelectedKeys[key] = true
+    end
+  end
+
+  state.allItems = items
+  state.allItemsByKey = itemsByKey
+  state.selectedKeys = newSelectedKeys
+end
+
+local function getQueueHeadItem()
+  local selectedItems = getSelectedItems()
+  return selectedItems[1]
+end
+
 local function renderGrid(uiSet, items, onClick, isDisabled)
   for index, item in ipairs(items) do
     local button = ensureGridButton(uiSet, index, onClick)
@@ -379,6 +438,104 @@ local function onCandidateItemClick(self)
   refreshWindows()
 end
 
+resolvePendingDisenchant = function()
+  local pending = state.pendingDisenchant
+  if not pending then
+    return
+  end
+
+  state.pendingDisenchant = nil
+
+  local currentInfo = C_Container.GetContainerItemInfo(pending.bagID, pending.slotID)
+  local isSameItem = currentInfo and currentInfo.hyperlink == pending.itemLink
+
+  if isSameItem then
+    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    refreshWindows()
+    return
+  end
+
+  state.selectedKeys[pending.key] = nil
+  refreshWindows()
+  print(string.format("%s 已尝试分解：%s", ADDON_PREFIX, pending.itemLink or "物品"))
+end
+
+tryDisenchantQueueHead = function()
+  if state.pendingDisenchant then
+    print(string.format("%s 正在处理上一件，请稍候。", ADDON_PREFIX))
+    return
+  end
+
+  if not hasDisenchantSpell() then
+    print(string.format("%s 未学习分解技能。", ADDON_PREFIX))
+    return
+  end
+
+  local queueHead = getQueueHeadItem()
+  if not queueHead then
+    print(string.format("%s 当前无可分解装备。", ADDON_PREFIX))
+    return
+  end
+
+  local itemInfo = C_Container.GetContainerItemInfo(queueHead.bagID, queueHead.slotID)
+  if not itemInfo or itemInfo.hyperlink ~= queueHead.itemLink then
+    syncSelectionWithCurrentBags()
+    refreshWindows()
+    print(string.format("%s 目标已失效，请重试。", ADDON_PREFIX))
+    return
+  end
+
+  local castOk = false
+  if CastSpellByID then
+    castOk = pcall(CastSpellByID, DISENCHANT_SPELL_ID)
+  elseif CastSpellByName then
+    castOk = pcall(CastSpellByName, "分解")
+  end
+
+  if not castOk then
+    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    return
+  end
+
+  if SpellIsTargeting and not SpellIsTargeting() then
+    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    return
+  end
+
+  local useOk = false
+  if C_Container and C_Container.UseContainerItem then
+    useOk = pcall(C_Container.UseContainerItem, queueHead.bagID, queueHead.slotID)
+  end
+
+  if not useOk then
+    if SpellStopTargeting and SpellIsTargeting and SpellIsTargeting() then
+      SpellStopTargeting()
+    end
+    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    return
+  end
+
+  if SpellIsTargeting and SpellIsTargeting() then
+    SpellStopTargeting()
+    print(string.format("%s 分解失败，请确认距离、状态和技能可用。", ADDON_PREFIX))
+    return
+  end
+
+  state.pendingDisenchant = {
+    key = queueHead.key,
+    bagID = queueHead.bagID,
+    slotID = queueHead.slotID,
+    itemLink = queueHead.itemLink,
+  }
+
+  local pendingRef = state.pendingDisenchant
+  C_Timer.After(DISENCHANT_RESOLVE_TIMEOUT_SECONDS, function()
+    if state.pendingDisenchant == pendingRef then
+      resolvePendingDisenchant()
+    end
+  end)
+end
+
 local function refreshMainWindow()
   ensureMainWindow()
 
@@ -398,6 +555,7 @@ local function refreshMainWindow()
   mainUI.contentFrame:SetSize(CONTENT_WIDTH, contentHeight)
   mainUI.emptyText:SetShown(#selectedItems == 0)
   mainUI.scrollFrame:SetVerticalScroll(0)
+  mainUI.disenchantButton:SetEnabled(#selectedItems > 0 and state.pendingDisenchant == nil)
 
   mainUI.titleText:SetText(string.format("可分解装备 (%d)", #selectedItems))
 end
@@ -465,6 +623,7 @@ local function runScan()
   local items, itemsByKey = collectDisenchantableItems()
   state.allItems = items
   state.allItemsByKey = itemsByKey
+  state.pendingDisenchant = nil
   resetSelectionToAllItems()
 
   ensureMainWindow()
@@ -475,6 +634,14 @@ local function runScan()
     candidateUI.frame:Hide()
   end
 end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
+eventFrame:SetScript("OnEvent", function(_, event)
+  if event == "BAG_UPDATE_DELAYED" and state.pendingDisenchant then
+    resolvePendingDisenchant()
+  end
+end)
 
 SLASH_EQD1 = "/eqd"
 SlashCmdList["EQD"] = function()
