@@ -11,6 +11,8 @@ local COLUMNS = 3
 local VISIBLE_ROWS = 3
 local ICON_SIZE = 36
 local ICON_GAP = 8
+local PLUS_VISUAL_SIZE = ICON_SIZE - 6
+local PLUS_DECOR_SIZE = ICON_SIZE + 4
 local CONTENT_WIDTH = (COLUMNS * ICON_SIZE) + ((COLUMNS - 1) * ICON_GAP)
 local VISIBLE_CONTENT_HEIGHT = (VISIBLE_ROWS * ICON_SIZE) + ((VISIBLE_ROWS - 1) * ICON_GAP)
 local WINDOW_WIDTH = CONTENT_WIDTH + 56
@@ -208,25 +210,36 @@ local function ensureMainWindow()
 
   local plusButton = CreateFrame("Button", nil, contentFrame)
   plusButton:SetSize(ICON_SIZE, ICON_SIZE)
-  plusButton:SetNormalAtlas("itemupgrade_greenplusicon")
-  plusButton:SetPushedAtlas("itemupgrade_greenplusicon_pressed")
+
+  local plusNormal = plusButton:CreateTexture(nil, "ARTWORK")
+  plusNormal:SetAtlas("itemupgrade_greenplusicon")
+  plusNormal:SetPoint("CENTER")
+  plusNormal:SetSize(PLUS_VISUAL_SIZE, PLUS_VISUAL_SIZE)
+
+  local plusPushed = plusButton:CreateTexture(nil, "ARTWORK")
+  plusPushed:SetAtlas("itemupgrade_greenplusicon_pressed")
+  plusPushed:SetPoint("CENTER")
+  plusPushed:SetSize(PLUS_VISUAL_SIZE, PLUS_VISUAL_SIZE)
+
+  plusButton:SetNormalTexture(plusNormal)
+  plusButton:SetPushedTexture(plusPushed)
 
   local plusGlow = plusButton:CreateTexture(nil, "OVERLAY")
   plusGlow:SetAtlas("itemupgrade_fx_slotinnerglow")
   plusGlow:SetPoint("CENTER")
-  plusGlow:SetSize(ICON_SIZE + 18, ICON_SIZE + 18)
-  plusGlow:SetAlpha(0.8)
+  plusGlow:SetSize(PLUS_DECOR_SIZE, PLUS_DECOR_SIZE)
+  plusGlow:SetAlpha(0.6)
 
   local plusBorder = plusButton:CreateTexture(nil, "OVERLAY", nil, 1)
   plusBorder:SetAtlas("itemupgrade_slotborder")
   plusBorder:SetPoint("CENTER")
-  plusBorder:SetSize(ICON_SIZE + 18, ICON_SIZE + 18)
+  plusBorder:SetSize(PLUS_DECOR_SIZE, PLUS_DECOR_SIZE)
 
   plusButton:SetScript("OnEnter", function()
-    plusGlow:SetAlpha(1)
+    plusGlow:SetAlpha(0.8)
   end)
   plusButton:SetScript("OnLeave", function()
-    plusGlow:SetAlpha(0.8)
+    plusGlow:SetAlpha(0.6)
   end)
   plusButton:SetScript("OnClick", function()
     toggleCandidateWindow()
