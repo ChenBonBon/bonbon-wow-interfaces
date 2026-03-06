@@ -1,7 +1,5 @@
 local ADDON_PREFIX = "[EnchantQuickDisenchant]"
-local MIDNIGHT_ENCHANTING_SKILL_LINE_ID = 2909
-local ENCHANTING_PROFESSION_SKILL_LINE_ID = 333
-local ENCHANTING_PROFESSION_ENUM_ID = Enum and Enum.Profession and Enum.Profession.Enchanting or nil
+local MIDNIGHT_ENCHANTING_SPELL_ID = 2909
 
 local QUALITY_UNCOMMON = (Enum and Enum.ItemQuality and Enum.ItemQuality.Uncommon) or 2
 local QUALITY_RARE = (Enum and Enum.ItemQuality and Enum.ItemQuality.Rare) or 3
@@ -34,49 +32,17 @@ local function containsDisenchantHint(text)
   return false
 end
 
-local function hasBaseEnchantingProfession()
-  local professionSlots = { GetProfessions() }
-
-  for _, professionIndex in ipairs(professionSlots) do
-    if professionIndex then
-      local _, _, _, _, _, _, skillLine = GetProfessionInfo(professionIndex)
-      if skillLine == ENCHANTING_PROFESSION_SKILL_LINE_ID then
-        return true
-      end
-    end
-  end
-
-  return false
-end
-
 local function hasCurrentVersionEnchanting()
-  if not hasBaseEnchantingProfession() then
-    return false
+  if C_SpellBook and C_SpellBook.IsSpellKnown then
+    return C_SpellBook.IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
-  if not C_TradeSkillUI or not C_TradeSkillUI.GetProfessionInfoBySkillLineID then
-    return true
+  if IsPlayerSpell then
+    return IsPlayerSpell(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
-  local professionInfo = C_TradeSkillUI.GetProfessionInfoBySkillLineID(MIDNIGHT_ENCHANTING_SKILL_LINE_ID)
-  if professionInfo and (professionInfo.skillLevel or 0) > 0 then
-    return true
-  end
-
-  if C_TradeSkillUI.GetAllProfessionTradeSkillLines and C_TradeSkillUI.GetTradeSkillDisplayName then
-    local skillLineIDs = C_TradeSkillUI.GetAllProfessionTradeSkillLines() or {}
-    for _, skillLineID in ipairs(skillLineIDs) do
-      local skillInfo = C_TradeSkillUI.GetProfessionInfoBySkillLineID(skillLineID)
-      if skillInfo and (skillInfo.skillLevel or 0) > 0 then
-        local displayName = C_TradeSkillUI.GetTradeSkillDisplayName(skillLineID)
-        if type(displayName) == "string" and (displayName:find("至暗之夜", 1, true) or displayName:find("Midnight", 1, true)) then
-          local parentSkillLine = skillInfo.parentProfessionID or skillInfo.parentProfessionSkillLineID
-          if parentSkillLine == ENCHANTING_PROFESSION_SKILL_LINE_ID or (ENCHANTING_PROFESSION_ENUM_ID and skillInfo.profession == ENCHANTING_PROFESSION_ENUM_ID) then
-            return true
-          end
-        end
-      end
-    end
+  if IsSpellKnown then
+    return IsSpellKnown(MIDNIGHT_ENCHANTING_SPELL_ID) and true or false
   end
 
   return false
