@@ -1,6 +1,3 @@
-local addonFrame = CreateFrame("Frame")
-addonFrame:RegisterEvent("PLAYER_LOGIN")
-
 local ADDON_PREFIX = "[EnchantQuickDisenchant]"
 local MIDNIGHT_ENCHANTING_SKILL_LINE_ID = 2909
 local ENCHANTING_PROFESSION_SKILL_LINE_ID = 333
@@ -202,12 +199,9 @@ local function buildQualityBreakdown(qualityCounts)
   return table.concat(parts, ", ")
 end
 
-addonFrame:SetScript("OnEvent", function(_, event)
-  if event ~= "PLAYER_LOGIN" then
-    return
-  end
-
+local function runScan()
   if not hasCurrentVersionEnchanting() then
+    print(string.format("%s 未学习至暗之夜附魔。", ADDON_PREFIX))
     return
   end
 
@@ -220,4 +214,9 @@ addonFrame:SetScript("OnEvent", function(_, event)
   if qualityBreakdown ~= "" then
     print(string.format("%s %s", ADDON_PREFIX, qualityBreakdown))
   end
-end)
+end
+
+SLASH_EQD1 = "/eqd"
+SlashCmdList["EQD"] = function()
+  runScan()
+end
