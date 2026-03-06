@@ -808,7 +808,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
   end
 end)
 
-SLASH_EQD1 = "/eqd"
-SlashCmdList["EQD"] = function()
+SLASH_QD1 = "/qd"
+SlashCmdList["QD"] = function()
   runScan()
 end
