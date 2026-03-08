@@ -102,6 +102,7 @@ function QD.collectDisenchantableItems()
             bagID = bagID,
             slotID = slotID,
             itemID = itemID,
+            itemGUID = itemInfo.itemGUID,
             itemLink = itemInfo.hyperlink,
             iconFileID = itemInfo.iconFileID,
             quality = quality,
@@ -125,6 +126,30 @@ function QD.collectDisenchantableItems()
   return items, itemsByKey
 end
 
+-- 判断指定物品是否命中白名单。
+function QD.isItemWhitelisted(item)
+  if not item or not item.itemGUID then
+    return false
+  end
+
+  return QD.state.whitelistByGUID[item.itemGUID] and true or false
+end
+
+-- 切换某件物品的白名单状态，返回切换后是否在白名单中。
+function QD.toggleWhitelistForItem(item)
+  if not item or not item.itemGUID then
+    return false
+  end
+
+  if QD.state.whitelistByGUID[item.itemGUID] then
+    QD.state.whitelistByGUID[item.itemGUID] = nil
+    return false
+  end
+
+  QD.state.whitelistByGUID[item.itemGUID] = true
+  return true
+end
+
 -- 按 allItems 顺序返回当前已选中的物品列表。
 function QD.getSelectedItems()
   local selectedItems = {}
@@ -144,7 +169,8 @@ function QD.syncSelectionWithCurrentBags()
   local newSelectedKeys = {}
 
   for key in pairs(QD.state.selectedKeys) do
-    if itemsByKey[key] then
+    local item = itemsByKey[key]
+    if item and not QD.isItemWhitelisted(item) then
       newSelectedKeys[key] = true
     end
   end
@@ -165,7 +191,9 @@ function QD.resetSelectionToAllItems()
   QD.state.selectedKeys = {}
 
   for _, item in ipairs(QD.state.allItems) do
-    QD.state.selectedKeys[item.key] = true
+    if not QD.isItemWhitelisted(item) then
+      QD.state.selectedKeys[item.key] = true
+    end
   end
 end
 

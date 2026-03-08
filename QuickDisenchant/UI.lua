@@ -203,6 +203,9 @@ function QD.ensureGridButton(uiSet, index, onClick)
 
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetHyperlink(self.itemLink)
+    if self.isWhitelisted then
+      GameTooltip:AddLine("白名单：右键可移除", 0.3, 1, 0.3)
+    end
     GameTooltip:Show()
   end)
 
@@ -243,7 +246,7 @@ function QD.applyClampedScroll(uiSet, targetScroll)
 end
 
 -- 将物品列表渲染到指定宫格 UI 集合。
-function QD.renderGrid(uiSet, items, onClick, isDisabled)
+function QD.renderGrid(uiSet, items, onClick, isDisabled, isWhitelisted)
   local previousScroll = 0
   if uiSet.scrollFrame and uiSet.scrollFrame.GetVerticalScroll then
     previousScroll = uiSet.scrollFrame:GetVerticalScroll() or 0
@@ -254,16 +257,31 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled)
     local column = (index - 1) % QD.COLUMNS
     local row = math.floor((index - 1) / QD.COLUMNS)
     local disabled = isDisabled and isDisabled(item) or false
+    local whitelisted = isWhitelisted and isWhitelisted(item) or false
 
     button:ClearAllPoints()
     button:SetPoint("TOPLEFT", uiSet.contentFrame, "TOPLEFT", column * (QD.ICON_SIZE + QD.ICON_GAP), -row * (QD.ICON_SIZE + QD.ICON_GAP))
     button.icon:SetTexture(item.iconFileID or 134400)
     button.icon:SetDesaturated(disabled)
     button.icon:SetAlpha(disabled and 0.35 or 1)
-    button.border:SetAlpha(disabled and 0.12 or 0.3)
+    if whitelisted then
+      button.border:SetVertexColor(0.2, 1, 0.2)
+      button.border:SetAlpha(0.45)
+    else
+      button.border:SetVertexColor(1, 1, 1)
+      button.border:SetAlpha(disabled and 0.12 or 0.3)
+    end
     button.itemKey = item.key
     button.itemLink = item.itemLink
     button.isDisabled = disabled
+    button.isWhitelisted = whitelisted
+    if button.RegisterForClicks then
+      if uiSet == QD.candidateUI then
+        button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+      else
+        button:RegisterForClicks("LeftButtonUp")
+      end
+    end
     button:Show()
   end
 
@@ -272,6 +290,8 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled)
     button.itemKey = nil
     button.itemLink = nil
     button.isDisabled = false
+    button.isWhitelisted = false
+    button.border:SetVertexColor(1, 1, 1)
     button:Hide()
   end
 
@@ -292,13 +312,38 @@ function QD.onMainItemClick(self)
   QD.refreshWindows()
 end
 
--- 在候选窗口点击物品时，将其加入已选列表。
-function QD.onCandidateItemClick(self)
-  if not self.itemKey or self.isDisabled then
+-- 在候选窗口点击物品时，左键加入已选；右键切换白名单。
+function QD.onCandidateItemClick(self, mouseButton)
+  if not self.itemKey then
     return
   end
 
-  if not QD.state.allItemsByKey[self.itemKey] then
+  local item = QD.state.allItemsByKey[self.itemKey]
+  if not item then
+    return
+  end
+
+  if mouseButton == "RightButton" then
+    if not item.itemGUID or item.itemGUID == "" then
+      print(string.format("%s 该物品缺少 GUID，无法加入白名单。", QD.ADDON_PREFIX))
+      return
+    end
+
+    local isNowWhitelisted = QD.toggleWhitelistForItem(item)
+    if isNowWhitelisted then
+      QD.state.selectedKeys[item.key] = nil
+      print(string.format("%s 已加入白名单：%s", QD.ADDON_PREFIX, item.itemLink or "物品"))
+    else
+      print(string.format("%s 已移出白名单：%s", QD.ADDON_PREFIX, item.itemLink or "物品"))
+    end
+    QD.refreshWindows()
+    return
+  end
+
+  if self.isDisabled then
+    if self.isWhitelisted then
+      print(string.format("%s 白名单物品不可添加，右键可移出白名单。", QD.ADDON_PREFIX))
+    end
     return
   end
 
@@ -337,17 +382,28 @@ function QD.refreshCandidateWindow()
 
   local total = #QD.state.allItems
   local selectedCount = 0
+  local whitelistCount = 0
   for _, item in ipairs(QD.state.allItems) do
     if QD.state.selectedKeys[item.key] then
       selectedCount = selectedCount + 1
     end
+    if QD.isItemWhitelisted(item) then
+      whitelistCount = whitelistCount + 1
+    end
   end
 
   QD.renderGrid(QD.candidateUI, QD.state.allItems, QD.onCandidateItemClick, function(item)
-    return QD.state.selectedKeys[item.key] and true or false
+    return (QD.state.selectedKeys[item.key] or QD.isItemWhitelisted(item)) and true or false
+  end, function(item)
+    return QD.isItemWhitelisted(item)
   end)
 
-  QD.candidateUI.titleText:SetText(string.format("可添加装备 (%d/%d)", total - selectedCount, total))
+  local availableCount = total - selectedCount - whitelistCount
+  if availableCount < 0 then
+    availableCount = 0
+  end
+
+  QD.candidateUI.titleText:SetText(string.format("可添加装备 (%d/%d) 白名单:%d", availableCount, total, whitelistCount))
 end
 
 -- 刷新当前可见的插件窗口。

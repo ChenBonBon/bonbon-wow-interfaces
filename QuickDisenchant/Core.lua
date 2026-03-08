@@ -38,8 +38,10 @@ QD.state = QD.state or {
   allItems = {},
   allItemsByKey = {},
   selectedKeys = {},
+  whitelistByGUID = {},
   pendingDisenchant = nil,
 }
+QD.state.whitelistByGUID = QD.state.whitelistByGUID or {}
 
 -- 主窗口引用集合。
 QD.mainUI = QD.mainUI or {
