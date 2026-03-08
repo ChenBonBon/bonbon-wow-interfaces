@@ -1,11 +1,11 @@
--- Disenchant module: pending lifecycle, secure macro setup, and result resolution.
+-- 分解模块：处理待分解生命周期、安全宏配置与结果结算。
 local _, QD = ...
 QD = QD or _G.QuickDisenchantNS
 if not QD then
   return
 end
 
--- Starts a pending disenchant attempt and schedules timeout fallback resolution.
+-- 开始一次待处理分解，并注册超时兜底结算。
 function QD.beginPendingDisenchant(actionItem)
   if not actionItem then
     return
@@ -29,7 +29,7 @@ function QD.beginPendingDisenchant(actionItem)
   end)
 end
 
--- Resolves pending operation as success/failure and updates list selection accordingly.
+-- 结算待处理分解结果（成功/失败）并同步更新选择列表。
 function QD.resolvePendingDisenchant()
   local pending = QD.state.pendingDisenchant
   if not pending then
@@ -57,7 +57,7 @@ function QD.resolvePendingDisenchant()
   print(string.format("%s 已尝试分解：%s", QD.ADDON_PREFIX, pending.itemLink or "物品"))
 end
 
--- Refreshes secure button mode, macro attributes, and enabled state.
+-- 刷新安全分解按钮的模式、宏属性和可用状态。
 function QD.updateDisenchantButtonAction()
   if not QD.mainUI.disenchantButton then
     return

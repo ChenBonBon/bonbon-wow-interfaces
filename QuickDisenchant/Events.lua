@@ -1,11 +1,11 @@
--- Events module: scan entrypoint, event-driven pending tracking, and slash command binding.
+-- 事件模块：扫描入口、事件驱动的待分解追踪与斜杠命令绑定。
 local _, QD = ...
 QD = QD or _G.QuickDisenchantNS
 if not QD then
   return
 end
 
--- Runs a fresh bag scan, resets selection to all candidates, and opens main window.
+-- 执行一次全量背包扫描，重置选中项并打开主窗口。
 function QD.runScan()
   local items, itemsByKey = QD.collectDisenchantableItems()
   QD.state.allItems = items
@@ -22,7 +22,7 @@ function QD.runScan()
   end
 end
 
--- Handles bag/spell/error events used to resolve pending disenchant actions.
+-- 处理用于分解结算的背包/施法/错误事件。
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
 eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
@@ -91,7 +91,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
   end
 end)
 
--- Registers slash command to trigger manual scan and open addon UI.
+-- 注册手动扫描命令并打开插件窗口。
 SLASH_QD1 = "/qd"
 SlashCmdList["QD"] = function()
   QD.runScan()

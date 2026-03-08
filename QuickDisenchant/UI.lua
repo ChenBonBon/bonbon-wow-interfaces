@@ -1,11 +1,11 @@
--- UI module: window creation, grid rendering, and selection interactions.
+-- 界面模块：负责窗口创建、宫格渲染与选择交互。
 local _, QD = ...
 QD = QD or _G.QuickDisenchantNS
 if not QD then
   return
 end
 
--- Creates a standard framed window with title, scroll area, and empty text.
+-- 创建标准窗口框体（标题、滚动区域与空状态文本）。
 function QD.createWindowFrame(frameName)
   local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
   frame:SetSize(QD.WINDOW_WIDTH, QD.WINDOW_HEIGHT)
@@ -51,7 +51,7 @@ function QD.createWindowFrame(frameName)
   return frame, titleText, scrollFrame, contentFrame, emptyText
 end
 
--- Lazily creates the main selection window and its action controls.
+-- 延迟创建主选择窗口及其操作控件。
 function QD.ensureMainWindow()
   if QD.mainUI.frame then
     return
@@ -159,7 +159,7 @@ function QD.ensureMainWindow()
   QD.mainUI.disenchantButton = disenchantButton
 end
 
--- Lazily creates the candidate list window.
+-- 延迟创建候选列表窗口。
 function QD.ensureCandidateWindow()
   if QD.candidateUI.frame then
     return
@@ -175,7 +175,7 @@ function QD.ensureCandidateWindow()
   QD.candidateUI.emptyText = emptyText
 end
 
--- Creates or returns a reusable grid icon button for an item cell.
+-- 创建（或复用）宫格物品按钮。
 function QD.ensureGridButton(uiSet, index, onClick)
   if uiSet.itemButtons[index] then
     return uiSet.itemButtons[index]
@@ -218,7 +218,7 @@ function QD.ensureGridButton(uiSet, index, onClick)
   return button
 end
 
--- Renders an item list into a target grid UI set.
+-- 将物品列表渲染到指定宫格 UI 集合。
 function QD.renderGrid(uiSet, items, onClick, isDisabled)
   for index, item in ipairs(items) do
     local button = QD.ensureGridButton(uiSet, index, onClick)
@@ -253,7 +253,7 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled)
   uiSet.scrollFrame:SetVerticalScroll(0)
 end
 
--- Removes an item from current selection when clicked in the main window.
+-- 在主窗口点击物品时，将其从已选列表移除。
 function QD.onMainItemClick(self)
   if not self.itemKey or not QD.state.selectedKeys[self.itemKey] then
     return
@@ -263,7 +263,7 @@ function QD.onMainItemClick(self)
   QD.refreshWindows()
 end
 
--- Adds an item into current selection when clicked in candidate window.
+-- 在候选窗口点击物品时，将其加入已选列表。
 function QD.onCandidateItemClick(self)
   if not self.itemKey or self.isDisabled then
     return
@@ -277,7 +277,7 @@ function QD.onCandidateItemClick(self)
   QD.refreshWindows()
 end
 
--- Renders main window title, grid, plus slot and action button state.
+-- 刷新主窗口：标题、宫格、加号槽位与分解按钮状态。
 function QD.refreshMainWindow()
   QD.ensureMainWindow()
 
@@ -302,7 +302,7 @@ function QD.refreshMainWindow()
   QD.mainUI.titleText:SetText(string.format("可分解装备 (%d)", #selectedItems))
 end
 
--- Renders candidate window contents and selection counters.
+-- 刷新候选窗口内容与计数信息。
 function QD.refreshCandidateWindow()
   QD.ensureCandidateWindow()
 
@@ -321,7 +321,7 @@ function QD.refreshCandidateWindow()
   QD.candidateUI.titleText:SetText(string.format("可添加装备 (%d/%d)", total - selectedCount, total))
 end
 
--- Refreshes any currently visible addon windows.
+-- 刷新当前可见的插件窗口。
 function QD.refreshWindows()
   if QD.mainUI.frame and QD.mainUI.frame:IsShown() then
     QD.refreshMainWindow()
@@ -332,7 +332,7 @@ function QD.refreshWindows()
   end
 end
 
--- Toggles candidate window visibility and positions it beside the main window.
+-- 切换候选窗口显示，并将其定位到主窗口右侧。
 function QD.toggleCandidateWindow()
   if not QD.mainUI.frame or not QD.mainUI.frame:IsShown() then
     return

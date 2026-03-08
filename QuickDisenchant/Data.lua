@@ -1,11 +1,11 @@
--- Data module: spell checks, bag scanning, selection helpers, and failure classification.
+-- 数据模块：法术检测、背包扫描、选择集辅助与失败原因分类。
 local _, QD = ...
 QD = QD or _G.QuickDisenchantNS
 if not QD then
   return
 end
 
--- Registers a frame in UISpecialFrames so ESC can close it.
+-- 将窗口注册到 UISpecialFrames，使 ESC 可关闭窗口。
 function QD.registerEscClosableFrame(frame)
   if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
     return
@@ -25,7 +25,7 @@ function QD.registerEscClosableFrame(frame)
   table.insert(UISpecialFrames, frameName)
 end
 
--- Returns true when the player knows the disenchant spell.
+-- 判断角色是否已学习分解技能。
 function QD.hasDisenchantSpell()
   if C_SpellBook and C_SpellBook.IsSpellKnown then
     return C_SpellBook.IsSpellKnown(QD.DISENCHANT_SPELL_ID) and true or false
@@ -46,17 +46,17 @@ function QD.hasDisenchantSpell()
   return false
 end
 
--- Identifies spellcast events that belong to player disenchant actions.
+-- 判断是否为玩家分解施法相关事件。
 function QD.isDisenchantSpellcastEvent(unit, spellID)
   return unit == "player" and spellID == QD.DISENCHANT_SPELL_ID
 end
 
--- Returns the highest equipped bag index to scan.
+-- 获取需要扫描的最高背包索引。
 function QD.getBagRangeEnd()
   return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 end
 
--- Applies static rules for whether an item is eligible for disenchant processing.
+-- 静态规则：判断物品是否符合分解候选条件。
 function QD.isDisenchantableByRules(itemLink, quality)
   if not itemLink or not IsEquippableItem(itemLink) then
     return false
@@ -78,7 +78,7 @@ function QD.isDisenchantableByRules(itemLink, quality)
   return true
 end
 
--- Scans current bags and returns all disenchant candidates plus a key-index map.
+-- 扫描当前背包，返回可分解列表和按 key 索引的映射。
 function QD.collectDisenchantableItems()
   local items = {}
   local itemsByKey = {}
@@ -125,7 +125,7 @@ function QD.collectDisenchantableItems()
   return items, itemsByKey
 end
 
--- Returns selected items in the same order as allItems.
+-- 按 allItems 顺序返回当前已选中的物品列表。
 function QD.getSelectedItems()
   local selectedItems = {}
 
@@ -138,7 +138,7 @@ function QD.getSelectedItems()
   return selectedItems
 end
 
--- Rebuilds scanned items and keeps only still-valid selected keys.
+-- 重新扫描背包，并仅保留仍然有效的已选 key。
 function QD.syncSelectionWithCurrentBags()
   local items, itemsByKey = QD.collectDisenchantableItems()
   local newSelectedKeys = {}
@@ -154,13 +154,13 @@ function QD.syncSelectionWithCurrentBags()
   QD.state.selectedKeys = newSelectedKeys
 end
 
--- Returns the first selected item used by the single-step disenchant queue.
+-- 返回当前单步分解队列的队首物品。
 function QD.getQueueHeadItem()
   local selectedItems = QD.getSelectedItems()
   return selectedItems[1]
 end
 
--- Marks all currently scanned items as selected.
+-- 将当前扫描到的物品全部标记为已选中。
 function QD.resetSelectionToAllItems()
   QD.state.selectedKeys = {}
 
@@ -169,7 +169,7 @@ function QD.resetSelectionToAllItems()
   end
 end
 
--- Checks whether the pending item is still unchanged in its original bag slot.
+-- 判断待处理物品在原背包格子里是否仍未变化。
 function QD.isPendingItemUnchanged(pending)
   if not pending then
     return false
@@ -179,7 +179,7 @@ function QD.isPendingItemUnchanged(pending)
   return currentInfo and currentInfo.hyperlink == pending.itemLink
 end
 
--- Detects "insufficient enchanting skill" failures from localized UI error text.
+-- 根据本地化错误文案识别“附魔技能不足”失败。
 function QD.isDisenchantSkillInsufficientFailure(pending)
   if not pending or type(pending.errorText) ~= "string" or pending.errorText == "" then
     return false
@@ -204,7 +204,7 @@ function QD.isDisenchantSkillInsufficientFailure(pending)
   return false
 end
 
--- Builds user-facing failure reason text from pending cast and UI error context.
+-- 基于施法状态与错误文案生成面向用户的失败原因。
 function QD.buildDisenchantFailureReason(pending)
   if pending.errorText and pending.errorText ~= "" then
     return pending.errorText
