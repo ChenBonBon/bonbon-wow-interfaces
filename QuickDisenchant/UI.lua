@@ -196,6 +196,14 @@ function QD.ensureGridButton(uiSet, index, onClick)
   border:SetSize(QD.ICON_SIZE + 20, QD.ICON_SIZE + 20)
   button.border = border
 
+  -- 白名单锁图标：在候选窗口里用于直观标记“已锁定/白名单”物品。
+  local lockIcon = button:CreateTexture(nil, "OVERLAY", nil, 2)
+  lockIcon:SetTexture("Interface/Buttons/LockButton-Locked-Up")
+  lockIcon:SetSize(14, 14)
+  lockIcon:SetPoint("TOPRIGHT", button, "TOPRIGHT", -1, -1)
+  lockIcon:Hide()
+  button.lockIcon = lockIcon
+
   button:SetScript("OnEnter", function(self)
     if not self.itemLink then
       return
@@ -275,6 +283,7 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled, isWhitelisted)
     button.itemLink = item.itemLink
     button.isDisabled = disabled
     button.isWhitelisted = whitelisted
+    button.lockIcon:SetShown(whitelisted)
     if button.RegisterForClicks then
       if uiSet == QD.candidateUI then
         button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -292,6 +301,7 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled, isWhitelisted)
     button.isDisabled = false
     button.isWhitelisted = false
     button.border:SetVertexColor(1, 1, 1)
+    button.lockIcon:Hide()
     button:Hide()
   end
 
