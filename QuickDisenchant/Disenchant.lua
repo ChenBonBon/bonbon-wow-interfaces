@@ -91,17 +91,7 @@ function QD.updateDisenchantButtonAction()
 
   if not (InCombatLockdown and InCombatLockdown()) then
     if mode == "armed" and actionItem then
-      local actionItemID = actionItem.itemID
-      if not actionItemID and C_Item and C_Item.GetItemInfoInstant then
-        actionItemID = C_Item.GetItemInfoInstant(actionItem.itemLink)
-      end
-
-      local macrotext
-      if actionItemID then
-        macrotext = string.format("/cast %s\n/use item:%d", QD.DISENCHANT_SPELL_NAME, actionItemID)
-      else
-        macrotext = string.format("/cast %s\n/use %d %d", QD.DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
-      end
+      local macrotext = string.format("/cast %s\n/use %d %d", QD.DISENCHANT_SPELL_NAME, actionItem.bagID, actionItem.slotID)
 
       button:SetAttribute("useOnKeyDown", false)
       button:SetAttribute("type", "macro")
