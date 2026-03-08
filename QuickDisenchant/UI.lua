@@ -218,8 +218,37 @@ function QD.ensureGridButton(uiSet, index, onClick)
   return button
 end
 
+-- 将滚动位置限制在当前可滚动范围内，并应用目标位置。
+function QD.applyClampedScroll(uiSet, targetScroll)
+  if not uiSet or not uiSet.scrollFrame or not uiSet.scrollFrame.SetVerticalScroll then
+    return
+  end
+
+  local maxScroll = 0
+  if uiSet.scrollFrame.GetVerticalScrollRange then
+    maxScroll = uiSet.scrollFrame:GetVerticalScrollRange() or 0
+  end
+  if maxScroll < 0 then
+    maxScroll = 0
+  end
+
+  local scroll = targetScroll or 0
+  if scroll < 0 then
+    scroll = 0
+  elseif scroll > maxScroll then
+    scroll = maxScroll
+  end
+
+  uiSet.scrollFrame:SetVerticalScroll(scroll)
+end
+
 -- 将物品列表渲染到指定宫格 UI 集合。
 function QD.renderGrid(uiSet, items, onClick, isDisabled)
+  local previousScroll = 0
+  if uiSet.scrollFrame and uiSet.scrollFrame.GetVerticalScroll then
+    previousScroll = uiSet.scrollFrame:GetVerticalScroll() or 0
+  end
+
   for index, item in ipairs(items) do
     local button = QD.ensureGridButton(uiSet, index, onClick)
     local column = (index - 1) % QD.COLUMNS
@@ -250,7 +279,7 @@ function QD.renderGrid(uiSet, items, onClick, isDisabled)
   local contentHeight = (rowCount * QD.ICON_SIZE) + ((rowCount - 1) * QD.ICON_GAP)
   uiSet.contentFrame:SetSize(QD.CONTENT_WIDTH, contentHeight)
   uiSet.emptyText:SetShown(#items == 0)
-  uiSet.scrollFrame:SetVerticalScroll(0)
+  QD.applyClampedScroll(uiSet, previousScroll)
 end
 
 -- 在主窗口点击物品时，将其从已选列表移除。
@@ -296,7 +325,7 @@ function QD.refreshMainWindow()
   local contentHeight = (rowCount * QD.ICON_SIZE) + ((rowCount - 1) * QD.ICON_GAP)
   QD.mainUI.contentFrame:SetSize(QD.CONTENT_WIDTH, contentHeight)
   QD.mainUI.emptyText:SetShown(#selectedItems == 0)
-  QD.mainUI.scrollFrame:SetVerticalScroll(0)
+  QD.applyClampedScroll(QD.mainUI, QD.mainUI.scrollFrame:GetVerticalScroll() or 0)
   QD.updateDisenchantButtonAction()
 
   QD.mainUI.titleText:SetText(string.format("可分解装备 (%d)", #selectedItems))
@@ -348,5 +377,6 @@ function QD.toggleCandidateWindow()
   QD.candidateUI.frame:ClearAllPoints()
   QD.candidateUI.frame:SetPoint("TOPLEFT", QD.mainUI.frame, "TOPRIGHT", 12, 0)
   QD.refreshCandidateWindow()
+  QD.applyClampedScroll(QD.candidateUI, 0)
   QD.candidateUI.frame:Show()
 end

@@ -15,6 +15,7 @@ function QD.runScan()
 
   QD.ensureMainWindow()
   QD.refreshMainWindow()
+  QD.applyClampedScroll(QD.mainUI, 0)
   QD.mainUI.frame:Show()
 
   if QD.candidateUI.frame then
