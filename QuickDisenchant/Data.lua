@@ -1,0 +1,238 @@
+-- Data module: spell checks, bag scanning, selection helpers, and failure classification.
+local _, QD = ...
+QD = QD or _G.QuickDisenchantNS
+if not QD then
+  return
+end
+
+-- Registers a frame in UISpecialFrames so ESC can close it.
+function QD.registerEscClosableFrame(frame)
+  if not frame or not frame.GetName or type(UISpecialFrames) ~= "table" then
+    return
+  end
+
+  local frameName = frame:GetName()
+  if not frameName then
+    return
+  end
+
+  for _, existingName in ipairs(UISpecialFrames) do
+    if existingName == frameName then
+      return
+    end
+  end
+
+  table.insert(UISpecialFrames, frameName)
+end
+
+-- Returns true when the player knows the disenchant spell.
+function QD.hasDisenchantSpell()
+  if C_SpellBook and C_SpellBook.IsSpellKnown then
+    return C_SpellBook.IsSpellKnown(QD.DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsSpellKnownOrOverridesKnown then
+    return IsSpellKnownOrOverridesKnown(QD.DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsSpellKnown then
+    return IsSpellKnown(QD.DISENCHANT_SPELL_ID) and true or false
+  end
+
+  if IsPlayerSpell then
+    return IsPlayerSpell(QD.DISENCHANT_SPELL_ID) and true or false
+  end
+
+  return false
+end
+
+-- Identifies spellcast events that belong to player disenchant actions.
+function QD.isDisenchantSpellcastEvent(unit, spellID)
+  return unit == "player" and spellID == QD.DISENCHANT_SPELL_ID
+end
+
+-- Returns the highest equipped bag index to scan.
+function QD.getBagRangeEnd()
+  return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
+end
+
+-- Applies static rules for whether an item is eligible for disenchant processing.
+function QD.isDisenchantableByRules(itemLink, quality)
+  if not itemLink or not IsEquippableItem(itemLink) then
+    return false
+  end
+
+  if quality < QD.QUALITY_UNCOMMON or quality > QD.QUALITY_EPIC then
+    return false
+  end
+
+  local _, _, _, itemEquipLoc, _, itemClassID = C_Item.GetItemInfoInstant(itemLink)
+  if not itemEquipLoc or itemEquipLoc == "" then
+    return false
+  end
+
+  if itemClassID ~= QD.ITEM_CLASS_ARMOR and itemClassID ~= QD.ITEM_CLASS_WEAPON then
+    return false
+  end
+
+  return true
+end
+
+-- Scans current bags and returns all disenchant candidates plus a key-index map.
+function QD.collectDisenchantableItems()
+  local items = {}
+  local itemsByKey = {}
+
+  for bagID = 0, QD.getBagRangeEnd() do
+    local slots = C_Container.GetContainerNumSlots(bagID) or 0
+
+    for slotID = 1, slots do
+      local itemInfo = C_Container.GetContainerItemInfo(bagID, slotID)
+      if itemInfo and itemInfo.hyperlink then
+        local quality = itemInfo.quality or 0
+        if QD.isDisenchantableByRules(itemInfo.hyperlink, quality) then
+          local itemID = itemInfo.itemID
+          if not itemID and C_Item and C_Item.GetItemInfoInstant then
+            itemID = C_Item.GetItemInfoInstant(itemInfo.hyperlink)
+          end
+
+          local key = string.format("%d:%d", bagID, slotID)
+          local itemData = {
+            key = key,
+            bagID = bagID,
+            slotID = slotID,
+            itemID = itemID,
+            itemLink = itemInfo.hyperlink,
+            iconFileID = itemInfo.iconFileID,
+            quality = quality,
+          }
+
+          table.insert(items, itemData)
+          itemsByKey[key] = itemData
+        end
+      end
+    end
+  end
+
+  table.sort(items, function(a, b)
+    if a.quality ~= b.quality then
+      return a.quality > b.quality
+    end
+
+    return tostring(a.itemLink) < tostring(b.itemLink)
+  end)
+
+  return items, itemsByKey
+end
+
+-- Returns selected items in the same order as allItems.
+function QD.getSelectedItems()
+  local selectedItems = {}
+
+  for _, item in ipairs(QD.state.allItems) do
+    if QD.state.selectedKeys[item.key] then
+      table.insert(selectedItems, item)
+    end
+  end
+
+  return selectedItems
+end
+
+-- Rebuilds scanned items and keeps only still-valid selected keys.
+function QD.syncSelectionWithCurrentBags()
+  local items, itemsByKey = QD.collectDisenchantableItems()
+  local newSelectedKeys = {}
+
+  for key in pairs(QD.state.selectedKeys) do
+    if itemsByKey[key] then
+      newSelectedKeys[key] = true
+    end
+  end
+
+  QD.state.allItems = items
+  QD.state.allItemsByKey = itemsByKey
+  QD.state.selectedKeys = newSelectedKeys
+end
+
+-- Returns the first selected item used by the single-step disenchant queue.
+function QD.getQueueHeadItem()
+  local selectedItems = QD.getSelectedItems()
+  return selectedItems[1]
+end
+
+-- Marks all currently scanned items as selected.
+function QD.resetSelectionToAllItems()
+  QD.state.selectedKeys = {}
+
+  for _, item in ipairs(QD.state.allItems) do
+    QD.state.selectedKeys[item.key] = true
+  end
+end
+
+-- Checks whether the pending item is still unchanged in its original bag slot.
+function QD.isPendingItemUnchanged(pending)
+  if not pending then
+    return false
+  end
+
+  local currentInfo = C_Container.GetContainerItemInfo(pending.bagID, pending.slotID)
+  return currentInfo and currentInfo.hyperlink == pending.itemLink
+end
+
+-- Detects "insufficient enchanting skill" failures from localized UI error text.
+function QD.isDisenchantSkillInsufficientFailure(pending)
+  if not pending or type(pending.errorText) ~= "string" or pending.errorText == "" then
+    return false
+  end
+
+  local errorText = pending.errorText
+  local skillPatterns = {
+    "附魔技能不足",
+    "附魔技能太低",
+    "附魔等级不足",
+    "附魔等级太低",
+    "需要更高的附魔",
+    "不足以分解",
+  }
+
+  for _, pattern in ipairs(skillPatterns) do
+    if string.find(errorText, pattern, 1, true) then
+      return true
+    end
+  end
+
+  return false
+end
+
+-- Builds user-facing failure reason text from pending cast and UI error context.
+function QD.buildDisenchantFailureReason(pending)
+  if pending.errorText and pending.errorText ~= "" then
+    return pending.errorText
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_FAILED" then
+    return "施法失败。"
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_FAILED_QUIET" then
+    return "施法条件不满足。"
+  end
+
+  if pending.castFailureEvent == "UNIT_SPELLCAST_INTERRUPTED" then
+    return "施法被打断。"
+  end
+
+  if pending.castState == "casting" then
+    return string.format("施法尚未完成（%.1f 秒内无结果）。", QD.DISENCHANT_RESOLVE_TIMEOUT_SECONDS)
+  end
+
+  if pending.castState == "succeeded" then
+    return "施法完成但目标物品未变化，可能该装备当前不可分解。"
+  end
+
+  if pending.castState == "stopped" then
+    return "施法已停止。"
+  end
+
+  return "未进入可用的分解施法状态。"
+end
