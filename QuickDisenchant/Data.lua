@@ -56,6 +56,25 @@ function QD.getBagRangeEnd()
   return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 end
 
+-- 基于背包格子获取物品 GUID（优先使用 C_Item.GetItemGUID）。
+function QD.getBagSlotItemGUID(bagID, slotID)
+  if not C_Item or not C_Item.GetItemGUID then
+    return nil
+  end
+
+  if ItemLocation and ItemLocation.CreateFromBagAndSlot then
+    local itemLocation = ItemLocation:CreateFromBagAndSlot(bagID, slotID)
+    if itemLocation and itemLocation.IsValid and itemLocation:IsValid() then
+      local itemGUID = C_Item.GetItemGUID(itemLocation)
+      if itemGUID and itemGUID ~= "" then
+        return itemGUID
+      end
+    end
+  end
+
+  return nil
+end
+
 -- 静态规则：判断物品是否符合分解候选条件。
 function QD.isDisenchantableByRules(itemLink, quality)
   if not itemLink or not IsEquippableItem(itemLink) then
@@ -102,7 +121,7 @@ function QD.collectDisenchantableItems()
             bagID = bagID,
             slotID = slotID,
             itemID = itemID,
-            itemGUID = itemInfo.itemGUID,
+            itemGUID = QD.getBagSlotItemGUID(bagID, slotID),
             itemLink = itemInfo.hyperlink,
             iconFileID = itemInfo.iconFileID,
             quality = quality,

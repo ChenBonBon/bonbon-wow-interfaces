@@ -334,6 +334,10 @@ function QD.onCandidateItemClick(self, mouseButton)
   end
 
   if mouseButton == "RightButton" then
+    if (not item.itemGUID or item.itemGUID == "") and QD.getBagSlotItemGUID then
+      item.itemGUID = QD.getBagSlotItemGUID(item.bagID, item.slotID)
+    end
+
     if not item.itemGUID or item.itemGUID == "" then
       print(string.format("%s 该物品缺少 GUID，无法加入白名单。", QD.ADDON_PREFIX))
       return
