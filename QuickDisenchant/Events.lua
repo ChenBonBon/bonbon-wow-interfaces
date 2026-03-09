@@ -7,7 +7,9 @@ end
 
 -- 执行一次全量背包扫描，重置选中项并打开主窗口。
 function QD.runScan()
+  local previousItemsByKey = QD.state.allItemsByKey
   local items, itemsByKey = QD.collectDisenchantableItems()
+  QD.rehydrateMissingItemGUIDs(itemsByKey, previousItemsByKey)
   QD.state.allItems = items
   QD.state.allItemsByKey = itemsByKey
   QD.state.pendingDisenchant = nil
