@@ -7,6 +7,10 @@ end
 
 -- 执行一次全量背包扫描，重置选中项并打开主窗口。
 function QD.runScan()
+  if QD.bindSavedVariables then
+    QD.bindSavedVariables()
+  end
+
   local items, itemsByKey = QD.collectDisenchantableItems()
   QD.state.allItems = items
   QD.state.allItemsByKey = itemsByKey
@@ -22,6 +26,19 @@ function QD.runScan()
     QD.candidateUI.frame:Hide()
   end
 end
+
+-- 插件加载完成后重绑定持久化白名单，避免读取到初始化空表。
+local addonLoadedFrame = CreateFrame("Frame")
+addonLoadedFrame:RegisterEvent("ADDON_LOADED")
+addonLoadedFrame:SetScript("OnEvent", function(_, _, addonName)
+  if addonName ~= QD.ADDON_NAME then
+    return
+  end
+
+  if QD.bindSavedVariables then
+    QD.bindSavedVariables()
+  end
+end)
 
 -- 处理用于分解结算的背包/施法/错误事件。
 local eventFrame = CreateFrame("Frame")

@@ -2,6 +2,7 @@
 local _, QD = ...
 QD = QD or {}
 _G.QuickDisenchantNS = QD
+QD.ADDON_NAME = "QuickDisenchant"
 
 -- 插件聊天前缀，用于所有面向用户的输出。
 QD.ADDON_PREFIX = "[QuickDisenchant]"
@@ -33,19 +34,24 @@ QD.WINDOW_HEIGHT = QD.VISIBLE_CONTENT_HEIGHT + 60
 -- 待处理分解结算的超时兜底秒数。
 QD.DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 3.0
 
--- 每角色持久化数据库（用于 /reload 后保留白名单）。
-QuickDisenchantDB = QuickDisenchantDB or {}
-QuickDisenchantDB.whitelistByGUID = QuickDisenchantDB.whitelistByGUID or {}
+-- 绑定 SavedVariables 与运行时状态，确保白名单始终使用同一张表。
+function QD.bindSavedVariables()
+  QuickDisenchantDB = QuickDisenchantDB or {}
+  QuickDisenchantDB.whitelistByGUID = QuickDisenchantDB.whitelistByGUID or {}
 
--- 运行时数据：扫描结果、选中集合与当前待处理分解状态。
-QD.state = QD.state or {
-  allItems = {},
-  allItemsByKey = {},
-  selectedKeys = {},
-  whitelistByGUID = QuickDisenchantDB.whitelistByGUID,
-  pendingDisenchant = nil,
-}
-QD.state.whitelistByGUID = QD.state.whitelistByGUID or QuickDisenchantDB.whitelistByGUID
+  QD.state = QD.state or {
+    allItems = {},
+    allItemsByKey = {},
+    selectedKeys = {},
+    whitelistByGUID = QuickDisenchantDB.whitelistByGUID,
+    pendingDisenchant = nil,
+  }
+
+  -- 每次绑定都强制指向持久化表，避免运行时引用到旧空表。
+  QD.state.whitelistByGUID = QuickDisenchantDB.whitelistByGUID
+end
+
+QD.bindSavedVariables()
 
 -- 主窗口引用集合。
 QD.mainUI = QD.mainUI or {
