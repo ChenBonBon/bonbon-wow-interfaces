@@ -3,6 +3,7 @@
 ## Notes: Scan and manage disenchantable equipment via /qd.
 ## Author: Codex
 ## Version: 1.0.0
+## SavedVariablesPerCharacter: QuickDisenchantDB
 
 Core.lua
 Data.lua

@@ -33,15 +33,19 @@ QD.WINDOW_HEIGHT = QD.VISIBLE_CONTENT_HEIGHT + 60
 -- 待处理分解结算的超时兜底秒数。
 QD.DISENCHANT_RESOLVE_TIMEOUT_SECONDS = 3.0
 
+-- 每角色持久化数据库（用于 /reload 后保留白名单）。
+QuickDisenchantDB = QuickDisenchantDB or {}
+QuickDisenchantDB.whitelistByGUID = QuickDisenchantDB.whitelistByGUID or {}
+
 -- 运行时数据：扫描结果、选中集合与当前待处理分解状态。
 QD.state = QD.state or {
   allItems = {},
   allItemsByKey = {},
   selectedKeys = {},
-  whitelistByGUID = {},
+  whitelistByGUID = QuickDisenchantDB.whitelistByGUID,
   pendingDisenchant = nil,
 }
-QD.state.whitelistByGUID = QD.state.whitelistByGUID or {}
+QD.state.whitelistByGUID = QD.state.whitelistByGUID or QuickDisenchantDB.whitelistByGUID
 
 -- 主窗口引用集合。
 QD.mainUI = QD.mainUI or {
