@@ -145,22 +145,6 @@ function QD.collectDisenchantableItems()
   return items, itemsByKey
 end
 
--- 当本次扫描缺少 GUID 时，尝试从上一轮同格同物品记录回填 GUID。
-function QD.rehydrateMissingItemGUIDs(itemsByKey, previousItemsByKey)
-  if not itemsByKey or not previousItemsByKey then
-    return
-  end
-
-  for key, item in pairs(itemsByKey) do
-    if item and (not item.itemGUID or item.itemGUID == "") then
-      local previousItem = previousItemsByKey[key]
-      if previousItem and previousItem.itemGUID and previousItem.itemGUID ~= "" and previousItem.itemLink == item.itemLink then
-        item.itemGUID = previousItem.itemGUID
-      end
-    end
-  end
-end
-
 -- 判断指定物品是否命中白名单。
 function QD.isItemWhitelisted(item)
   if not item or not item.itemGUID then
@@ -201,7 +185,6 @@ end
 -- 重新扫描背包，并仅保留仍然有效的已选 key。
 function QD.syncSelectionWithCurrentBags()
   local items, itemsByKey = QD.collectDisenchantableItems()
-  QD.rehydrateMissingItemGUIDs(itemsByKey, QD.state.allItemsByKey)
   local newSelectedKeys = {}
 
   for key in pairs(QD.state.selectedKeys) do
