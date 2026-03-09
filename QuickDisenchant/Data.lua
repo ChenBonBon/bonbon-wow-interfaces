@@ -62,14 +62,18 @@ function QD.getBagSlotItemGUID(bagID, slotID)
     return nil
   end
 
-  if ItemLocation and ItemLocation.CreateFromBagAndSlot then
-    local itemLocation = ItemLocation:CreateFromBagAndSlot(bagID, slotID)
-    if itemLocation and itemLocation.IsValid and itemLocation:IsValid() then
-      local itemGUID = C_Item.GetItemGUID(itemLocation)
-      if itemGUID and itemGUID ~= "" then
-        return itemGUID
-      end
-    end
+  if not ItemLocation or not ItemLocation.CreateFromBagAndSlot then
+    return nil
+  end
+
+  local itemLocation = ItemLocation:CreateFromBagAndSlot(bagID, slotID)
+  if not itemLocation then
+    return nil
+  end
+
+  local itemGUID = C_Item.GetItemGUID(itemLocation)
+  if itemGUID and itemGUID ~= "" then
+    return itemGUID
   end
 
   return nil
