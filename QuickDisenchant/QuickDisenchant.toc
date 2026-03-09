@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: QuickDisenchant
 ## Notes: Scan and manage disenchantable equipment via /qd.
-## Author: Codex
+## Author: BonBon
 ## Version: 1.0.0
 ## SavedVariablesPerCharacter: QuickDisenchantDB
 
