@@ -42,6 +42,7 @@ function QD.resolvePendingDisenchant()
   if isSameItem then
     if QD.isDisenchantSkillInsufficientFailure(pending) then
       QD.state.selectedKeys[pending.key] = nil
+      QD.syncSelectionWithCurrentBags()
       QD.refreshWindows()
       print(string.format("%s 分解失败：附魔技能不足，已从列表移除：%s", QD.ADDON_PREFIX, pending.itemLink or "物品"))
       return
@@ -53,6 +54,7 @@ function QD.resolvePendingDisenchant()
   end
 
   QD.state.selectedKeys[pending.key] = nil
+  QD.syncSelectionWithCurrentBags()
   QD.refreshWindows()
   print(string.format("%s 已尝试分解：%s", QD.ADDON_PREFIX, pending.itemLink or "物品"))
 end
