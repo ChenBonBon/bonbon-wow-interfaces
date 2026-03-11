@@ -18,6 +18,7 @@ QD.QUALITY_EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
 -- 可分解候选允许的物品大类。
 QD.ITEM_CLASS_WEAPON = (Enum and Enum.ItemClass and Enum.ItemClass.Weapon) or 2
 QD.ITEM_CLASS_ARMOR = (Enum and Enum.ItemClass and Enum.ItemClass.Armor) or 4
+QD.ITEM_CLASS_PROFESSION = (Enum and Enum.ItemClass and (Enum.ItemClass.Profession or Enum.ItemClass.Professions)) or 19
 
 -- 宫格与窗口布局配置。
 QD.COLUMNS = 3

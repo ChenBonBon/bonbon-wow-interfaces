@@ -90,7 +90,7 @@ function QD.isDisenchantableByRules(itemLink, quality)
     return false
   end
 
-  if itemClassID ~= QD.ITEM_CLASS_ARMOR and itemClassID ~= QD.ITEM_CLASS_WEAPON then
+  if itemClassID ~= QD.ITEM_CLASS_ARMOR and itemClassID ~= QD.ITEM_CLASS_WEAPON and itemClassID ~= QD.ITEM_CLASS_PROFESSION then
     return false
   end
 
