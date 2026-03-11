@@ -11,6 +11,17 @@ function QD.runScan()
     QD.bindSavedVariables()
   end
 
+  if not QD.hasDisenchantSpell or not QD.hasDisenchantSpell() then
+    if QD.mainUI.frame then
+      QD.mainUI.frame:Hide()
+    end
+    if QD.candidateUI.frame then
+      QD.candidateUI.frame:Hide()
+    end
+    print(string.format("%s 未学习分解技能。", QD.ADDON_PREFIX))
+    return
+  end
+
   local items, itemsByKey = QD.collectDisenchantableItems()
   QD.state.allItems = items
   QD.state.allItemsByKey = itemsByKey
