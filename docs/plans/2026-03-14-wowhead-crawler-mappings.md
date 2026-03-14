@@ -56,6 +56,7 @@ Write tests that assert:
 - `validate_task()` rejects category/type mismatches
 - `normalize_task()` fills a missing `enabled` field with `True`
 - `get_category_type_meta()` returns metadata for a valid pair
+- quality, slot, and type metadata expose Wowhead `facet/value`
 
 **Step 2: Run test to verify it fails**
 

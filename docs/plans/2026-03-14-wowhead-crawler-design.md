@@ -59,6 +59,12 @@ crawler/
 - `SLOTS`
 - `CATEGORY_TYPES`
 
+每个可参与站点筛选的语义项都包含：
+
+- `label`：中文展示名称
+- `wowhead.facet`：对应 Wowhead 的筛选字段名，例如 `quality`
+- `wowhead.value`：对应 Wowhead 的筛选值，例如 `2`
+
 2. 纯函数接口
 - `validate_task(task)`
 - `normalize_task(task)`
@@ -103,6 +109,6 @@ crawler/
 - `crawler` 最小 Python 工程骨架
 - 映射模块
 - 样例任务配置文件
-- 针对映射模块的 `pytest` 测试
+- 针对映射模块的 `unittest` 测试
 
 抓取器、URL 生成器、调度器和输出写入模块留到下一阶段。
