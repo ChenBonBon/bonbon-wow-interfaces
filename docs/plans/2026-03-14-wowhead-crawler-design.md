@@ -17,13 +17,15 @@ crawler/
   core/
     __init__.py
     mappings.py
+    url_builder.py
   tasks/
     wowhead_items.example.json
   tests/
     test_mappings.py
+    test_url_builder.py
 ```
 
-第一阶段只实现 `mappings.py`，其余抓取、解析、输出模块在后续阶段补齐。
+当前阶段先实现 `mappings.py` 和 `url_builder.py`，其余抓取、解析、输出模块在后续阶段补齐。
 
 ## 任务配置格式
 
@@ -62,6 +64,7 @@ crawler/
 每个可参与站点筛选的语义项都包含：
 
 - `label`：中文展示名称
+- `wowhead.path`：仅 `category` 使用，对应 Wowhead 的路径段，例如 `weapons`
 - `wowhead.facet`：对应 Wowhead 的筛选字段名，例如 `quality`
 - `wowhead.value`：对应 Wowhead 的筛选值，例如 `2`
 
@@ -72,7 +75,16 @@ crawler/
 - `describe_task(task)`
 - `get_category_type_meta(category, type_name)`
 
-模块暂时不绑定具体 Wowhead URL 规则，先把语义层稳定下来。
+`crawler/core/url_builder.py` 负责把任务转换为：
+
+- `filter_path`：例如 `quality:2/slot:1/type:1`
+- `path`：例如 `items/armor/quality:2/slot:1/type:1`
+- `url`：例如 `https://www.wowhead.com/items/armor/quality:2/slot:1/type:1`
+
+URL 生成规则固定为：
+
+- `category` 决定 `items/{category_path}`
+- `quality`、`slot`、`type` 按固定顺序拼接为筛选段
 
 ## 中文标签规范
 
@@ -108,7 +120,8 @@ crawler/
 
 - `crawler` 最小 Python 工程骨架
 - 映射模块
+- URL 生成模块
 - 样例任务配置文件
-- 针对映射模块的 `unittest` 测试
+- 针对映射模块和 URL 生成器的 `unittest` 测试
 
-抓取器、URL 生成器、调度器和输出写入模块留到下一阶段。
+抓取器、调度器和输出写入模块留到下一阶段。

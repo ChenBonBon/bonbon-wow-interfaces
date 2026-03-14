@@ -8,8 +8,8 @@ QUALITIES = {
 }
 
 CATEGORIES = {
-    "weapon": {"label": "武器"},
-    "armor": {"label": "护甲"},
+    "weapon": {"label": "武器", "wowhead": {"path": "weapons"}},
+    "armor": {"label": "护甲", "wowhead": {"path": "armor"}},
 }
 
 SLOTS = {

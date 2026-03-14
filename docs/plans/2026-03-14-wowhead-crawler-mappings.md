@@ -56,6 +56,7 @@ Write tests that assert:
 - `validate_task()` rejects category/type mismatches
 - `normalize_task()` fills a missing `enabled` field with `True`
 - `get_category_type_meta()` returns metadata for a valid pair
+- category metadata exposes Wowhead `path`
 - quality, slot, and type metadata expose Wowhead `facet/value`
 
 **Step 2: Run test to verify it fails**
@@ -77,6 +78,39 @@ Run the same command and confirm failures now point to specific missing behavior
 ```bash
 git add crawler/tests/test_mappings.py crawler/core/mappings.py
 git commit -m "test: define crawler mappings behavior"
+```
+
+### Task 2.5: Add URL builder behavior
+
+**Files:**
+- Create: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/url_builder.py`
+- Create: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tests/test_url_builder.py`
+
+**Step 1: Write the failing test**
+
+Write tests that assert:
+
+- an armor task produces `filter_path`, `path`, and `url`
+- a weapon task produces `filter_path`, `path`, and `url`
+- filter segment order is fixed as `quality/slot/type`
+
+**Step 2: Run test to verify it fails**
+
+Run: `cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler && python3 -m unittest discover -s tests -p 'test_*.py'`
+
+Expected: FAIL because `core.url_builder` does not exist yet.
+
+**Step 3: Write minimal implementation**
+
+Implement a pure helper that validates the task and returns:
+
+- `filter_path`
+- `path`
+- `url`
+
+**Step 4: Run test to verify it passes**
+
+Run the same command and confirm the URL builder tests pass.
 ```
 
 ### Task 3: Implement the mappings module

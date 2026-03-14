@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from core.mappings import (
+    CATEGORIES,
     QUALITIES,
     SLOTS,
     build_task_slug,
@@ -50,6 +51,10 @@ class MappingsTest(unittest.TestCase):
     def test_quality_and_slot_expose_wowhead_filter_metadata(self):
         self.assertEqual(QUALITIES["uncommon"]["wowhead"], {"facet": "quality", "value": 2})
         self.assertEqual(SLOTS["main_hand"]["wowhead"], {"facet": "slot", "value": 21})
+
+    def test_categories_expose_wowhead_paths(self):
+        self.assertEqual(CATEGORIES["weapon"]["wowhead"], {"path": "weapons"})
+        self.assertEqual(CATEGORIES["armor"]["wowhead"], {"path": "armor"})
 
     def test_validate_task_rejects_category_type_mismatch(self):
         invalid_task = dict(self.armor_task)
