@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add a dedicated retry path that reruns only `failed` fetch tasks from an existing manifest.
+**Goal:** Add a dedicated retry path that reruns only `failed` fetch tasks from an existing manifest, then recomputes aggregate output and retries Lua export for the whole run.
 
-**Architecture:** Reuse the existing fetcher flow by extracting a shared internal task-processing helper keyed by allowed statuses. Keep `fetch_manifest_results()` focused on `planned` tasks and add `retry_failed_manifest_results()` plus a thin `scripts.retry_failed_run` adapter.
+**Architecture:** Reuse the existing fetcher flow by extracting a shared internal task-processing helper keyed by allowed statuses. Keep `fetch_manifest_results()` focused on `planned` tasks and add `retry_failed_manifest_results()`. The script adapter will then call `aggregate_run` and `export_lua`, with export acting as the completeness gate for the entire manifest.
 
 **Tech Stack:** Python 3, unittest
 
@@ -23,7 +23,8 @@ Add tests that assert:
 - `retry_failed_manifest_results()` only processes `failed` tasks
 - successful retry changes `failed` to `fetched`
 - retry does not touch `planned` or `fetched`
-- `scripts.retry_failed_run.run()` calls the retry path
+- `scripts.retry_failed_run.run()` calls retry, aggregate, and export in order
+- retry with remaining `planned` tasks raises during export
 
 **Step 2: Run test to verify it fails**
 
@@ -64,7 +65,7 @@ Implement:
 
 - shared internal helper for processing selected task statuses
 - `retry_failed_manifest_results(manifest_path, fetch_url=None)`
-- `scripts.retry_failed_run.run(argv=None, fetch_url=None)`
+- `scripts.retry_failed_run.run(argv=None, fetch_url=None, export_output_path=None)`
 
 **Step 4: Run test to verify it passes**
 

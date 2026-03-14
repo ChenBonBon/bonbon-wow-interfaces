@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add a single script entrypoint that orchestrates manifest generation, fetching, and unique-item aggregation.
+**Goal:** Add a single script entrypoint that orchestrates manifest generation, fetching, unique-item aggregation, and Lua export.
 
-**Architecture:** Keep orchestration outside the `core` modules. `scripts.run_all` simply forwards to `scripts.generate_run`, `scripts.fetch_run`, and `scripts.aggregate_run` in sequence, returning the generated manifest path.
+**Architecture:** Keep orchestration outside the `core` modules. `scripts.run_all` forwards to `scripts.generate_run`, `scripts.fetch_run`, `scripts.aggregate_run`, and `scripts.export_lua` in sequence, returning the generated manifest path. Export is the final guard and aborts if the manifest is still incomplete.
 
 **Tech Stack:** Python 3, unittest
 
@@ -22,6 +22,8 @@ Add a test that asserts `scripts.run_all.run()`:
 - creates `manifest.json`
 - writes at least one task result file
 - writes `items.unique.json`
+- writes the Lua export file when all tasks succeed
+- raises when export detects incomplete manifest
 
 **Step 2: Run test to verify it fails**
 
@@ -58,6 +60,7 @@ Implement:
 
 - `run(argv=None, fetch_url=None)`
 - `main()`
+- export forwarding after aggregate
 
 **Step 4: Run test to verify it passes**
 
@@ -73,7 +76,7 @@ Run the same command and confirm all tests pass.
 Document:
 
 - `scripts.run_all`
-- default flow `generate -> fetch -> aggregate`
+- default flow `generate -> fetch -> aggregate -> export`
 
 **Step 2: Review for consistency**
 

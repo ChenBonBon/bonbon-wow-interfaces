@@ -172,8 +172,8 @@ manifest 中每个任务当前固定使用：
 其中：
 
 - `fetch_run` 只处理 `planned`
-- `run_all` 默认执行 `generate -> fetch -> aggregate`
-- `retry_failed_run` 只处理 `failed`
+- `run_all` 默认执行 `generate -> fetch -> aggregate -> export`
+- `retry_failed_run` 先处理 `failed`，再执行全量 `aggregate -> export`
 
 `crawler/core/aggregator.py` 负责：
 

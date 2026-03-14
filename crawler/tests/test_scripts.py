@@ -148,7 +148,7 @@ class ScriptsTest(unittest.TestCase):
                 ],
             )
 
-    def test_retry_failed_run_only_retries_failed_tasks(self):
+    def test_retry_failed_run_raises_when_manifest_still_contains_planned_tasks(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = temp_path / "manifest.json"
@@ -170,22 +170,83 @@ class ScriptsTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            processed_manifest_path = run_retry_failed(
-                [str(manifest_path)],
-                fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
-            )
+            with self.assertRaisesRegex(ValueError, "planned"):
+                run_retry_failed(
+                    [str(manifest_path)],
+                    fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
+                )
 
-            self.assertEqual(processed_manifest_path, manifest_path)
             self.assertTrue((temp_path / "failed-task.json").exists())
+            self.assertTrue((temp_path / "items.unique.json").exists())
             self.assertFalse((temp_path / "planned-task.json").exists())
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
             self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
+            self.assertFalse((temp_path / "DisenchantableByWowhead.lua").exists())
+
+    def test_retry_failed_run_retries_then_aggregates_and_exports(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            output_path = temp_path / "DisenchantableByWowhead.lua"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 2,
+                        "tasks": [
+                            {"task_id": "done-task", "status": "fetched", "url": "https://example.com/done"},
+                            {"task_id": "failed-task", "status": "failed", "url": "https://example.com/failed"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (temp_path / "done-task.json").write_text(
+                json.dumps(
+                    {
+                        "task_id": "done-task",
+                        "url": "https://example.com/done",
+                        "items": [
+                            {"itemId": 1001, "name": "Alpha Hood"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            processed_manifest_path = run_retry_failed(
+                [str(manifest_path)],
+                fetch_url=lambda _url: '<script>var listviewitems = [{"id":1002,"name":"Beta Hood"}];</script>',
+                export_output_path=output_path,
+            )
+
+            self.assertEqual(processed_manifest_path, manifest_path)
+            self.assertTrue((temp_path / "failed-task.json").exists())
+            self.assertTrue((temp_path / "items.unique.json").exists())
+            self.assertTrue(output_path.exists())
+            unique_items = json.loads((temp_path / "items.unique.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                unique_items,
+                [
+                    {"itemId": 1001, "name": "Alpha Hood"},
+                    {"itemId": 1002, "name": "Beta Hood"},
+                ],
+            )
+            self.assertIn("[1001] = true", output_path.read_text(encoding="utf-8"))
+            self.assertIn("[1002] = true", output_path.read_text(encoding="utf-8"))
 
     def test_run_all_orchestrates_generate_fetch_and_aggregate(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             task_file = temp_path / "tasks.json"
+            output_path = temp_path / "DisenchantableByWowhead.lua"
             task_file.write_text(
                 json.dumps(
                     [
@@ -208,13 +269,44 @@ class ScriptsTest(unittest.TestCase):
             manifest_path = run_all(
                 [str(task_file), str(temp_path / "outputs")],
                 fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
+                export_output_path=output_path,
             )
 
             self.assertTrue(manifest_path.exists())
             self.assertTrue((manifest_path.parent / "uncommon-head-cloth.json").exists())
             self.assertTrue((manifest_path.parent / "items.unique.json").exists())
+            self.assertTrue(output_path.exists())
             unique_items = json.loads((manifest_path.parent / "items.unique.json").read_text(encoding="utf-8"))
             self.assertEqual(unique_items, [{"itemId": 2620, "name": "Augural Shroud"}])
+
+    def test_run_all_raises_when_export_detects_incomplete_manifest(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            task_file = temp_path / "tasks.json"
+            task_file.write_text(
+                json.dumps(
+                    [
+                        {
+                            "task_id": "will-fail",
+                            "enabled": True,
+                            "quality": "uncommon",
+                            "category": "armor",
+                            "slot": "head",
+                            "type": "cloth",
+                            "query_filters": {},
+                        }
+                    ],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "failed"):
+                run_all(
+                    [str(task_file), str(temp_path / "outputs")],
+                    fetch_url=lambda _url: (_ for _ in ()).throw(RuntimeError("network fail")),
+                )
 
     def test_export_lua_writes_lua_data_file_from_complete_manifest(self):
         with TemporaryDirectory() as temp_dir:
