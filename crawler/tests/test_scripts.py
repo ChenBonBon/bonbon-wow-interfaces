@@ -1,4 +1,6 @@
 import json
+import os
+import subprocess
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,6 +14,38 @@ from scripts.run_all import run as run_all
 
 
 class ScriptsTest(unittest.TestCase):
+    def test_run_all_shell_wrapper_exists_and_surfaces_usage(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "run_all.sh"
+
+        self.assertTrue(script_path.exists())
+        self.assertTrue(os.access(script_path, os.X_OK))
+
+        result = subprocess.run(
+            [str(script_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Usage: python3 -m scripts.run_all", result.stderr)
+
+    def test_retry_failed_shell_wrapper_exists_and_surfaces_usage(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "retry_failed.sh"
+
+        self.assertTrue(script_path.exists())
+        self.assertTrue(os.access(script_path, os.X_OK))
+
+        result = subprocess.run(
+            [str(script_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Usage: python3 -m scripts.retry_failed_run", result.stderr)
+
     def test_generate_run_creates_manifest_file(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

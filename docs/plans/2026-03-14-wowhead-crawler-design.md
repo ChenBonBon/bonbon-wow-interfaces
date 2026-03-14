@@ -13,6 +13,9 @@
 
 ```text
 crawler/
+  bin/
+    run_all.sh
+    retry_failed.sh
   pyproject.toml
   core/
     __init__.py
@@ -160,6 +163,8 @@ manifest 中每个任务当前固定使用：
 
 推荐执行入口为脚本层：
 
+- `./bin/run_all.sh`
+- `./bin/retry_failed.sh`
 - `python3 -m scripts.aggregate_run`
 - `python3 -m scripts.export_lua`
 - `python3 -m scripts.generate_run`
@@ -168,6 +173,12 @@ manifest 中每个任务当前固定使用：
 - `python3 -m scripts.retry_failed_run`
 
 脚本层只负责参数转发，不承载业务逻辑。
+
+其中 `crawler/bin/` 下的 shell wrapper 只负责：
+
+- 切换到 `crawler/` 目录
+- 调用对应的 Python 脚本入口
+- 透传原始命令行参数
 
 其中：
 
