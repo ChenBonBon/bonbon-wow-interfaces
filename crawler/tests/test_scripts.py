@@ -7,6 +7,7 @@ from scripts.aggregate_run import run as run_aggregate
 from scripts.fetch_run import run as run_fetch
 from scripts.generate_run import run as run_generate
 from scripts.retry_failed_run import run as run_retry_failed
+from scripts.run_all import run as run_all
 
 
 class ScriptsTest(unittest.TestCase):
@@ -179,6 +180,40 @@ class ScriptsTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
             self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
+
+    def test_run_all_orchestrates_generate_fetch_and_aggregate(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            task_file = temp_path / "tasks.json"
+            task_file.write_text(
+                json.dumps(
+                    [
+                        {
+                            "task_id": "uncommon-head-cloth",
+                            "enabled": True,
+                            "quality": "uncommon",
+                            "category": "armor",
+                            "slot": "head",
+                            "type": "cloth",
+                            "query_filters": {},
+                        }
+                    ],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            manifest_path = run_all(
+                [str(task_file), str(temp_path / "outputs")],
+                fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
+            )
+
+            self.assertTrue(manifest_path.exists())
+            self.assertTrue((manifest_path.parent / "uncommon-head-cloth.json").exists())
+            self.assertTrue((manifest_path.parent / "items.unique.json").exists())
+            unique_items = json.loads((manifest_path.parent / "items.unique.json").read_text(encoding="utf-8"))
+            self.assertEqual(unique_items, [{"itemId": 2620, "name": "Augural Shroud"}])
 
 
 if __name__ == "__main__":
