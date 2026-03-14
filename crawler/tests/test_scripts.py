@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.aggregate_run import run as run_aggregate
+from scripts.export_lua import run as run_export_lua
 from scripts.fetch_run import run as run_fetch
 from scripts.generate_run import run as run_generate
 from scripts.retry_failed_run import run as run_retry_failed
@@ -214,6 +215,34 @@ class ScriptsTest(unittest.TestCase):
             self.assertTrue((manifest_path.parent / "items.unique.json").exists())
             unique_items = json.loads((manifest_path.parent / "items.unique.json").read_text(encoding="utf-8"))
             self.assertEqual(unique_items, [{"itemId": 2620, "name": "Augural Shroud"}])
+
+    def test_export_lua_writes_lua_data_file(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            items_unique_path = temp_path / "items.unique.json"
+            output_path = temp_path / "DisenchantableByWowhead.lua"
+            items_unique_path.write_text(
+                json.dumps(
+                    [
+                        {"itemId": 1002, "name": "Beta Hood"},
+                        {"itemId": 1001, "name": "Alpha Hood"},
+                    ],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            written_path = run_export_lua([str(items_unique_path), str(output_path)])
+
+            self.assertEqual(written_path, output_path)
+            self.assertTrue(output_path.exists())
+            self.assertIn("[1001] = true", output_path.read_text(encoding="utf-8"))
+
+    def test_quickdisenchant_toc_includes_wowhead_data_file(self):
+        toc_path = Path(__file__).resolve().parents[2] / "QuickDisenchant" / "QuickDisenchant.toc"
+        toc_text = toc_path.read_text(encoding="utf-8")
+        self.assertIn("DisenchantableByWowhead.lua", toc_text)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ crawler/
     __init__.py
     aggregator.py
     fetcher.py
+    lua_exporter.py
     mappings.py
     runner.py
     url_builder.py
@@ -29,6 +30,7 @@ crawler/
   scripts/
     __init__.py
     aggregate_run.py
+    export_lua.py
     generate_run.py
     fetch_run.py
     run_all.py
@@ -159,6 +161,7 @@ manifest 中每个任务当前固定使用：
 推荐执行入口为脚本层：
 
 - `python3 -m scripts.aggregate_run`
+- `python3 -m scripts.export_lua`
 - `python3 -m scripts.generate_run`
 - `python3 -m scripts.fetch_run`
 - `python3 -m scripts.run_all`
@@ -189,6 +192,15 @@ manifest 中每个任务当前固定使用：
   }
 ]
 ```
+
+`crawler/core/lua_exporter.py` 负责：
+
+- 读取 `items.unique.json`
+- 导出为插件可直接加载的 Lua 数据文件
+
+目标文件为：
+
+- `QuickDisenchant/DisenchantableByWowhead.lua`
 
 ## 中文标签规范
 
@@ -243,6 +255,7 @@ crawler/
 - 任务预执行 runner
 - manifest 驱动 fetcher
 - 极简唯一物品汇总器
+- Lua 数据导出器
 - 薄脚本入口
 - 样例任务配置文件
 - 针对映射模块、URL 生成器、runner、fetcher、汇总器和脚本层的 `unittest` 测试
