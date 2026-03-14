@@ -22,6 +22,7 @@ Add tests that assert:
 
 - `QUERY_FILTERS["available_to_players"]` exposes Wowhead filter id `161`
 - `QUERY_FILTERS["can_be_worn"]` exposes Wowhead filter id `195`
+- `QUERY_FILTERS["disenchantable"]` exposes Wowhead filter id `8`
 - both filters support `yes/no/any`
 - `normalize_task()` fills missing `query_filters` with an empty dict
 - `validate_task()` rejects unknown query filter keys and invalid values
@@ -57,6 +58,7 @@ Add tests that assert:
 
 - `query_filters={"available_to_players": "yes"}` generates `filter=161;1;0`
 - adding `can_be_worn: "yes"` generates `filter=161:195;1:1;0:0`
+- `query_filters={"disenchantable": "no"}` generates `filter=8;2;0`
 - `any` does not appear in the query string
 - when there are no active query filters, `query_string` is empty and `url` has no `?`
 

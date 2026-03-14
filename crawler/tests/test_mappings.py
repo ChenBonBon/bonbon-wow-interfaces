@@ -42,6 +42,16 @@ class MappingsTest(unittest.TestCase):
                 "can_be_worn": "yes",
             },
         }
+        self.disenchantable_filter_task = {
+            "task_id": "uncommon-head-cloth-disenchantable-no",
+            "quality": "uncommon",
+            "category": "armor",
+            "slot": "head",
+            "type": "cloth",
+            "query_filters": {
+                "disenchantable": "no",
+            },
+        }
 
     def test_build_task_slug_uses_semantic_values(self):
         self.assertEqual(build_task_slug(self.armor_task), "uncommon-head-cloth")
@@ -82,6 +92,7 @@ class MappingsTest(unittest.TestCase):
     def test_query_filters_expose_wowhead_ids_and_values(self):
         self.assertEqual(QUERY_FILTERS["available_to_players"]["wowhead"], {"id": 161})
         self.assertEqual(QUERY_FILTERS["can_be_worn"]["wowhead"], {"id": 195})
+        self.assertEqual(QUERY_FILTERS["disenchantable"]["wowhead"], {"id": 8})
         self.assertEqual(
             QUERY_FILTERS["available_to_players"]["values"],
             {
@@ -90,6 +101,9 @@ class MappingsTest(unittest.TestCase):
                 "any": None,
             },
         )
+
+    def test_validate_task_accepts_disenchantable_query_filter(self):
+        validate_task(self.disenchantable_filter_task)
 
     def test_validate_task_rejects_category_type_mismatch(self):
         invalid_task = dict(self.armor_task)

@@ -51,6 +51,28 @@ class UrlBuilderTest(unittest.TestCase):
                 "can_be_worn": "yes",
             },
         }
+        self.disenchantable_query_filter_task = {
+            "task_id": "uncommon-head-cloth-disenchantable-no",
+            "quality": "uncommon",
+            "category": "armor",
+            "slot": "head",
+            "type": "cloth",
+            "query_filters": {
+                "disenchantable": "no",
+            },
+        }
+        self.combined_query_filter_task = {
+            "task_id": "uncommon-head-cloth-combined",
+            "quality": "uncommon",
+            "category": "armor",
+            "slot": "head",
+            "type": "cloth",
+            "query_filters": {
+                "available_to_players": "yes",
+                "disenchantable": "no",
+                "can_be_worn": "yes",
+            },
+        }
 
     def test_builds_armor_url_parts(self):
         parts = build_task_url_parts(self.armor_task)
@@ -88,6 +110,22 @@ class UrlBuilderTest(unittest.TestCase):
         self.assertEqual(
             parts["url"],
             "https://www.wowhead.com/items/armor/quality:2/slot:1/type:1?filter=195;1;0",
+        )
+
+    def test_builds_disenchantable_query_filter_string(self):
+        parts = build_task_url_parts(self.disenchantable_query_filter_task)
+        self.assertEqual(parts["query_string"], "filter=8;2;0")
+        self.assertEqual(
+            parts["url"],
+            "https://www.wowhead.com/items/armor/quality:2/slot:1/type:1?filter=8;2;0",
+        )
+
+    def test_builds_combined_query_filter_string_in_stable_order(self):
+        parts = build_task_url_parts(self.combined_query_filter_task)
+        self.assertEqual(parts["query_string"], "filter=161:195:8;1:1:2;0:0:0")
+        self.assertEqual(
+            parts["url"],
+            "https://www.wowhead.com/items/armor/quality:2/slot:1/type:1?filter=161:195:8;1:1:2;0:0:0",
         )
 
 

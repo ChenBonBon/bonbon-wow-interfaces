@@ -116,6 +116,12 @@ crawler/
 - `no`
 - `any`
 
+当前内置的 query filter 包括：
+
+- `available_to_players` -> Wowhead `id 161`
+- `can_be_worn` -> Wowhead `id 195`
+- `disenchantable` -> Wowhead `id 8`
+
 其中 `any` 或字段未填写时，不参与 URL 的查询参数拼接。
 
 2. 纯函数接口

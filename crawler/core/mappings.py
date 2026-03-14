@@ -83,9 +83,14 @@ QUERY_FILTERS = {
         "wowhead": {"id": 195},
         "values": deepcopy(QUERY_FILTER_VALUE_MAP),
     },
+    "disenchantable": {
+        "label": "可分解",
+        "wowhead": {"id": 8},
+        "values": deepcopy(QUERY_FILTER_VALUE_MAP),
+    },
 }
 
-QUERY_FILTER_ORDER = ("available_to_players", "can_be_worn")
+QUERY_FILTER_ORDER = ("available_to_players", "can_be_worn", "disenchantable")
 
 REQUIRED_TASK_FIELDS = ("task_id", "quality", "category", "slot", "type")
 
