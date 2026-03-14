@@ -1,0 +1,30 @@
+[
+  {
+    "task_id": "uncommon-head-cloth",
+    "enabled": true,
+    "quality": "uncommon",
+    "category": "armor",
+    "slot": "head",
+    "type": "cloth",
+    "query_filters": {
+      "available_to_players": "yes",
+      "can_be_worn": "yes"
+    }
+  },
+  {
+    "task_id": "uncommon-head-leather",
+    "enabled": true,
+    "quality": "uncommon",
+    "category": "armor",
+    "slot": "head",
+    "type": "leather"
+  },
+  {
+    "task_id": "rare-main-hand-dagger",
+    "enabled": true,
+    "quality": "rare",
+    "category": "weapon",
+    "slot": "main_hand",
+    "type": "dagger"
+  }
+]

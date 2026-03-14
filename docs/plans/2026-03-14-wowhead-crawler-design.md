@@ -180,6 +180,11 @@ manifest 中每个任务当前固定使用：
 - 调用对应的 Python 脚本入口
 - 透传原始命令行参数
 
+其中 `./bin/run_all.sh` 额外提供：
+
+- 无参数时默认使用 `tasks/wowhead_items.json`
+- 显式传参时优先使用你提供的任务文件与输出目录
+
 其中：
 
 - `fetch_run` 只处理 `planned`

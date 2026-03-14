@@ -22,7 +22,9 @@ Add tests that assert:
 - `crawler/bin/run_all.sh` exists
 - `crawler/bin/retry_failed.sh` exists
 - both files are executable
-- running either script without arguments surfaces the underlying Python usage message
+- `run_all.sh` injects `tasks/wowhead_items.json` when called without args
+- `run_all.sh` preserves explicit arguments unchanged
+- `retry_failed.sh` still surfaces the underlying Python usage message when called without args
 
 **Step 2: Run test to verify it fails**
 
@@ -38,6 +40,7 @@ Create the two shell wrappers with only:
 - strict shell flags
 - repo-relative `cd`
 - `python3 -m scripts... "$@"`
+- plus a no-arg default for `run_all.sh`
 
 **Step 4: Run test to verify it passes**
 

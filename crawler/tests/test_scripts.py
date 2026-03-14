@@ -14,21 +14,71 @@ from scripts.run_all import run as run_all
 
 
 class ScriptsTest(unittest.TestCase):
-    def test_run_all_shell_wrapper_exists_and_surfaces_usage(self):
+    def test_run_all_shell_wrapper_uses_default_task_file_when_no_args(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "run_all.sh"
+        crawler_dir = Path(__file__).resolve().parents[1]
+
+        self.assertTrue(script_path.exists())
+        self.assertTrue(os.access(script_path, os.X_OK))
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python3"
+            argv_file = temp_path / "argv.txt"
+            cwd_file = temp_path / "cwd.txt"
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$@\" > \"{argv_file}\"\n"
+                f"pwd > \"{cwd_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
+
+            result = subprocess.run(
+                [str(script_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={**os.environ, "PATH": f"{temp_path}:{os.environ['PATH']}"},
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                argv_file.read_text(encoding="utf-8").splitlines(),
+                ["-m", "scripts.run_all", "tasks/wowhead_items.json"],
+            )
+            self.assertEqual(cwd_file.read_text(encoding="utf-8").strip(), str(crawler_dir))
+
+    def test_run_all_shell_wrapper_forwards_explicit_args_unchanged(self):
         script_path = Path(__file__).resolve().parents[1] / "bin" / "run_all.sh"
 
         self.assertTrue(script_path.exists())
         self.assertTrue(os.access(script_path, os.X_OK))
 
-        result = subprocess.run(
-            [str(script_path)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python3"
+            argv_file = temp_path / "argv.txt"
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$@\" > \"{argv_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Usage: python3 -m scripts.run_all", result.stderr)
+            result = subprocess.run(
+                [str(script_path), "tasks/custom.json", "outputs/custom"],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={**os.environ, "PATH": f"{temp_path}:{os.environ['PATH']}"},
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                argv_file.read_text(encoding="utf-8").splitlines(),
+                ["-m", "scripts.run_all", "tasks/custom.json", "outputs/custom"],
+            )
 
     def test_retry_failed_shell_wrapper_exists_and_surfaces_usage(self):
         script_path = Path(__file__).resolve().parents[1] / "bin" / "retry_failed.sh"
