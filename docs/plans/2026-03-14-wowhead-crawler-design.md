@@ -16,6 +16,7 @@ crawler/
   pyproject.toml
   core/
     __init__.py
+    aggregator.py
     fetcher.py
     mappings.py
     runner.py
@@ -24,13 +25,16 @@ crawler/
     <run_id>/
       manifest.json
       <task_id>.json
+      items.unique.json
   scripts/
     __init__.py
+    aggregate_run.py
     generate_run.py
     fetch_run.py
   tasks/
     wowhead_items.example.json
   tests/
+    test_aggregator.py
     test_fetcher.py
     test_mappings.py
     test_runner.py
@@ -152,10 +156,29 @@ manifest 中每个任务当前固定使用：
 
 推荐执行入口为脚本层：
 
+- `python3 -m scripts.aggregate_run`
 - `python3 -m scripts.generate_run`
 - `python3 -m scripts.fetch_run`
 
 脚本层只负责参数转发，不承载业务逻辑。
+
+`crawler/core/aggregator.py` 负责：
+
+- 读取 `manifest.json`
+- 只汇总 `status: "fetched"` 的任务结果
+- 按 `itemId` 去重
+- 写出极简唯一物品表 `items.unique.json`
+
+`items.unique.json` 的结构为：
+
+```json
+[
+  {
+    "itemId": 2620,
+    "name": "Augural Shroud"
+  }
+]
+```
 
 ## 中文标签规范
 
@@ -209,8 +232,9 @@ crawler/
 - URL 生成模块
 - 任务预执行 runner
 - manifest 驱动 fetcher
+- 极简唯一物品汇总器
 - 薄脚本入口
 - 样例任务配置文件
-- 针对映射模块、URL 生成器、runner、fetcher 和脚本层的 `unittest` 测试
+- 针对映射模块、URL 生成器、runner、fetcher、汇总器和脚本层的 `unittest` 测试
 
 抓取器、解析器和调度增强能力留到下一阶段。
