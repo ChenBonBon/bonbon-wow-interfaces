@@ -134,6 +134,34 @@ class MappingsTest(unittest.TestCase):
         for task in tasks:
             validate_task(task)
 
+    def test_default_task_file_contains_only_main_hand_daggers(self):
+        config_path = Path(__file__).resolve().parents[1] / "tasks" / "wowhead_items.json"
+        tasks = json.loads(config_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(len(tasks), 3)
+        self.assertEqual(
+            [task["task_id"] for task in tasks],
+            [
+                "uncommon-main-hand-dagger",
+                "rare-main-hand-dagger",
+                "epic-main-hand-dagger",
+            ],
+        )
+
+        for task in tasks:
+            validate_task(task)
+            self.assertEqual(task["category"], "weapon")
+            self.assertEqual(task["slot"], "main_hand")
+            self.assertEqual(task["type"], "dagger")
+            self.assertEqual(
+                task["query_filters"],
+                {
+                    "available_to_players": "yes",
+                    "can_be_worn": "yes",
+                    "disenchantable": "no",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
