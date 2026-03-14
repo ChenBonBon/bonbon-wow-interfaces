@@ -16,21 +16,24 @@ crawler/
   pyproject.toml
   core/
     __init__.py
+    fetcher.py
     mappings.py
     runner.py
     url_builder.py
   outputs/
     <run_id>/
       manifest.json
+      <task_id>.json
   tasks/
     wowhead_items.example.json
   tests/
+    test_fetcher.py
     test_mappings.py
     test_runner.py
     test_url_builder.py
 ```
 
-当前阶段先实现 `mappings.py`、`url_builder.py` 和 `runner.py`，其余抓取与解析模块在后续阶段补齐。
+当前阶段先实现 `mappings.py`、`url_builder.py`、`runner.py` 和 `fetcher.py`，更完整的抓取增强能力在后续阶段补齐。
 
 ## 任务配置格式
 
@@ -132,6 +135,17 @@ manifest 中每个任务当前固定使用：
 
 - `status: "planned"`
 
+`crawler/core/fetcher.py` 负责：
+
+- 读取 `manifest.json`
+- 抓取 `status: "planned"` 的任务页面
+- 从页面中的 `listviewitems` 提取 item 数据
+- 写入每任务一个结果文件
+- 把任务状态更新为：
+  - `planned`
+  - `fetched`
+  - `failed`
+
 ## 中文标签规范
 
 所有 `label` 统一改为中文，便于后续日志、调试和结果展示复用。例如：
@@ -154,6 +168,21 @@ crawler/
       uncommon-head-cloth.json
 ```
 
+每个任务结果文件第一版结构为：
+
+```json
+{
+  "task_id": "uncommon-head-cloth",
+  "url": "https://www.wowhead.com/...",
+  "items": [
+    {
+      "itemId": 2620,
+      "name": "Augural Shroud"
+    }
+  ]
+}
+```
+
 失败处理先采用任务级重试：
 
 - 每个任务重试 3 次
@@ -168,7 +197,8 @@ crawler/
 - 映射模块
 - URL 生成模块
 - 任务预执行 runner
+- manifest 驱动 fetcher
 - 样例任务配置文件
-- 针对映射模块、URL 生成器和 runner 的 `unittest` 测试
+- 针对映射模块、URL 生成器、runner 和 fetcher 的 `unittest` 测试
 
 抓取器、解析器和调度增强能力留到下一阶段。
