@@ -5,7 +5,11 @@
     "quality": "uncommon",
     "category": "armor",
     "slot": "head",
-    "type": "cloth"
+    "type": "cloth",
+    "query_filters": {
+      "available_to_players": "yes",
+      "can_be_worn": "yes"
+    }
   },
   {
     "task_id": "uncommon-head-leather",

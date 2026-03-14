@@ -7,6 +7,12 @@ QUALITIES = {
     "epic": {"label": "紫色", "wowhead": {"facet": "quality", "value": 4}},
 }
 
+QUERY_FILTER_VALUE_MAP = {
+    "yes": 1,
+    "no": 2,
+    "any": None,
+}
+
 CATEGORIES = {
     "weapon": {"label": "武器", "wowhead": {"path": "weapons"}},
     "armor": {"label": "护甲", "wowhead": {"path": "armor"}},
@@ -66,6 +72,21 @@ CATEGORY_TYPES = {
     },
 }
 
+QUERY_FILTERS = {
+    "available_to_players": {
+        "label": "玩家可用",
+        "wowhead": {"id": 161},
+        "values": deepcopy(QUERY_FILTER_VALUE_MAP),
+    },
+    "can_be_worn": {
+        "label": "可穿戴/可装备",
+        "wowhead": {"id": 195},
+        "values": deepcopy(QUERY_FILTER_VALUE_MAP),
+    },
+}
+
+QUERY_FILTER_ORDER = ("available_to_players", "can_be_worn")
+
 REQUIRED_TASK_FIELDS = ("task_id", "quality", "category", "slot", "type")
 
 
@@ -82,8 +103,9 @@ def get_category_type_meta(category, type_name):
 
 
 def normalize_task(task):
-    normalized = dict(task)
+    normalized = deepcopy(task)
     normalized.setdefault("enabled", True)
+    normalized.setdefault("query_filters", {})
     return normalized
 
 
@@ -98,6 +120,9 @@ def validate_task(task):
     if not isinstance(normalized["enabled"], bool):
         raise ValueError("任务字段缺失或非法: enabled")
 
+    if not isinstance(normalized["query_filters"], dict):
+        raise ValueError("任务字段缺失或非法: query_filters")
+
     if normalized["quality"] not in QUALITIES:
         raise ValueError(f"未知 quality: {normalized['quality']}")
 
@@ -108,6 +133,14 @@ def validate_task(task):
         raise ValueError(f"未知 slot: {normalized['slot']}")
 
     get_category_type_meta(normalized["category"], normalized["type"])
+
+    for filter_name, filter_value in normalized["query_filters"].items():
+        filter_meta = QUERY_FILTERS.get(filter_name)
+        if filter_meta is None:
+            raise ValueError(f"未知 query_filter: {filter_name}")
+
+        if filter_value not in filter_meta["values"]:
+            raise ValueError(f"未知 query_filter 值: {filter_name}.{filter_value}")
 
 
 def build_task_slug(task):

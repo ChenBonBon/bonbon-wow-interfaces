@@ -111,7 +111,43 @@ Implement a pure helper that validates the task and returns:
 **Step 4: Run test to verify it passes**
 
 Run the same command and confirm the URL builder tests pass.
-```
+
+### Task 2.6: Add semantic query filter support
+
+**Files:**
+- Modify: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings.py`
+- Modify: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tests/test_mappings.py`
+- Modify: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/url_builder.py`
+- Modify: `/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tests/test_url_builder.py`
+
+**Step 1: Write the failing test**
+
+Write tests that assert:
+
+- `query_filters` uses semantic filter names
+- each query filter exposes a Wowhead filter id
+- values use `yes/no/any`
+- URL builder outputs `query_string` and appends it only when active filters exist
+
+**Step 2: Run test to verify it fails**
+
+Run: `cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler && python3 -m unittest discover -s tests -p 'test_*.py'`
+
+Expected: FAIL because query filter metadata and serialization do not exist yet.
+
+**Step 3: Write minimal implementation**
+
+Add:
+
+- `QUERY_FILTERS`
+- stable query filter ordering
+- `normalize_task()` default for `query_filters`
+- `validate_task()` rules for query filter keys and values
+- URL builder query string serialization
+
+**Step 4: Run test to verify it passes**
+
+Run the same command and confirm all tests pass.
 
 ### Task 3: Implement the mappings module
 

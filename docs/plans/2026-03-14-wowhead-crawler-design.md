@@ -50,6 +50,24 @@ crawler/
 - `category`：`weapon` / `armor`
 - `slot`：语义化部位名，例如 `head`
 - `type`：对应 `category` 下的具体类型，例如 `cloth` 或 `dagger`
+- `query_filters`：可选对象，使用语义化查询筛选，例如 `available_to_players: "yes"`
+
+示例：
+
+```json
+{
+  "task_id": "uncommon-head-cloth",
+  "enabled": true,
+  "quality": "uncommon",
+  "category": "armor",
+  "slot": "head",
+  "type": "cloth",
+  "query_filters": {
+    "available_to_players": "yes",
+    "can_be_worn": "yes"
+  }
+}
+```
 
 ## 映射模块设计
 
@@ -60,6 +78,7 @@ crawler/
 - `CATEGORIES`
 - `SLOTS`
 - `CATEGORY_TYPES`
+- `QUERY_FILTERS`
 
 每个可参与站点筛选的语义项都包含：
 
@@ -67,6 +86,14 @@ crawler/
 - `wowhead.path`：仅 `category` 使用，对应 Wowhead 的路径段，例如 `weapons`
 - `wowhead.facet`：对应 Wowhead 的筛选字段名，例如 `quality`
 - `wowhead.value`：对应 Wowhead 的筛选值，例如 `2`
+
+`QUERY_FILTERS` 采用三态语义值：
+
+- `yes`
+- `no`
+- `any`
+
+其中 `any` 或字段未填写时，不参与 URL 的查询参数拼接。
 
 2. 纯函数接口
 - `validate_task(task)`
@@ -79,12 +106,15 @@ crawler/
 
 - `filter_path`：例如 `quality:2/slot:1/type:1`
 - `path`：例如 `items/armor/quality:2/slot:1/type:1`
+- `query_string`：例如 `filter=161:195;1:1;0:0`
 - `url`：例如 `https://www.wowhead.com/items/armor/quality:2/slot:1/type:1`
 
 URL 生成规则固定为：
 
 - `category` 决定 `items/{category_path}`
 - `quality`、`slot`、`type` 按固定顺序拼接为筛选段
+- `query_filters` 按固定顺序生成 `filter=` 查询参数
+- 如果存在 `query_string`，最终 URL 形如 `path?query_string`
 
 ## 中文标签规范
 

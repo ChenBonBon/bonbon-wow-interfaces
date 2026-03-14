@@ -5,6 +5,7 @@ from pathlib import Path
 from core.mappings import (
     CATEGORIES,
     QUALITIES,
+    QUERY_FILTERS,
     SLOTS,
     build_task_slug,
     describe_task,
@@ -30,6 +31,17 @@ class MappingsTest(unittest.TestCase):
             "slot": "main_hand",
             "type": "dagger",
         }
+        self.query_filter_task = {
+            "task_id": "uncommon-head-cloth-filtered",
+            "quality": "uncommon",
+            "category": "armor",
+            "slot": "head",
+            "type": "cloth",
+            "query_filters": {
+                "available_to_players": "yes",
+                "can_be_worn": "yes",
+            },
+        }
 
     def test_build_task_slug_uses_semantic_values(self):
         self.assertEqual(build_task_slug(self.armor_task), "uncommon-head-cloth")
@@ -42,6 +54,17 @@ class MappingsTest(unittest.TestCase):
         normalized = normalize_task(self.armor_task)
         self.assertTrue(normalized["enabled"])
         self.assertEqual(normalized["task_id"], "uncommon-head-cloth")
+        self.assertEqual(normalized["query_filters"], {})
+
+    def test_normalize_task_preserves_query_filters(self):
+        normalized = normalize_task(self.query_filter_task)
+        self.assertEqual(
+            normalized["query_filters"],
+            {
+                "available_to_players": "yes",
+                "can_be_worn": "yes",
+            },
+        )
 
     def test_get_category_type_meta_returns_chinese_label(self):
         meta = get_category_type_meta("weapon", "dagger")
@@ -56,9 +79,35 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(CATEGORIES["weapon"]["wowhead"], {"path": "weapons"})
         self.assertEqual(CATEGORIES["armor"]["wowhead"], {"path": "armor"})
 
+    def test_query_filters_expose_wowhead_ids_and_values(self):
+        self.assertEqual(QUERY_FILTERS["available_to_players"]["wowhead"], {"id": 161})
+        self.assertEqual(QUERY_FILTERS["can_be_worn"]["wowhead"], {"id": 195})
+        self.assertEqual(
+            QUERY_FILTERS["available_to_players"]["values"],
+            {
+                "yes": 1,
+                "no": 2,
+                "any": None,
+            },
+        )
+
     def test_validate_task_rejects_category_type_mismatch(self):
         invalid_task = dict(self.armor_task)
         invalid_task["type"] = "dagger"
+
+        with self.assertRaises(ValueError):
+            validate_task(invalid_task)
+
+    def test_validate_task_rejects_unknown_query_filter_key(self):
+        invalid_task = dict(self.armor_task)
+        invalid_task["query_filters"] = {"unknown_filter": "yes"}
+
+        with self.assertRaises(ValueError):
+            validate_task(invalid_task)
+
+    def test_validate_task_rejects_invalid_query_filter_value(self):
+        invalid_task = dict(self.armor_task)
+        invalid_task["query_filters"] = {"available_to_players": "maybe"}
 
         with self.assertRaises(ValueError):
             validate_task(invalid_task)
