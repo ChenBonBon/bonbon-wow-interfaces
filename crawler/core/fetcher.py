@@ -29,13 +29,23 @@ def parse_items_from_html(html_text):
 
 def fetch_manifest_results(manifest_path, fetch_url=None):
     """根据 manifest 抓取任务结果并回写状态。"""
+    _process_manifest_results(manifest_path, allowed_statuses={"planned"}, fetch_url=fetch_url)
+
+
+def retry_failed_manifest_results(manifest_path, fetch_url=None):
+    """重跑 manifest 中失败的任务并回写状态。"""
+    _process_manifest_results(manifest_path, allowed_statuses={"failed"}, fetch_url=fetch_url)
+
+
+def _process_manifest_results(manifest_path, allowed_statuses, fetch_url=None):
+    """根据允许状态集合处理 manifest 中的任务。"""
     manifest_file = Path(manifest_path)
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     fetch_url = fetch_url or _fetch_url
     output_dir = manifest_file.parent
 
     for task in manifest["tasks"]:
-        if task.get("status") != "planned":
+        if task.get("status") not in allowed_statuses:
             continue
 
         try:

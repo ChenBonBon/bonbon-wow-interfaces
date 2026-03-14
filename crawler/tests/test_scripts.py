@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from scripts.aggregate_run import run as run_aggregate
 from scripts.fetch_run import run as run_fetch
 from scripts.generate_run import run as run_generate
+from scripts.retry_failed_run import run as run_retry_failed
 
 
 class ScriptsTest(unittest.TestCase):
@@ -144,6 +145,40 @@ class ScriptsTest(unittest.TestCase):
                     {"itemId": 1003, "name": "Gamma Hood"},
                 ],
             )
+
+    def test_retry_failed_run_only_retries_failed_tasks(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 2,
+                        "tasks": [
+                            {"task_id": "planned-task", "status": "planned", "url": "https://example.com/planned"},
+                            {"task_id": "failed-task", "status": "failed", "url": "https://example.com/failed"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            processed_manifest_path = run_retry_failed(
+                [str(manifest_path)],
+                fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
+            )
+
+            self.assertEqual(processed_manifest_path, manifest_path)
+            self.assertTrue((temp_path / "failed-task.json").exists())
+            self.assertFalse((temp_path / "planned-task.json").exists())
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
+            self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
 
 
 if __name__ == "__main__":

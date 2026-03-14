@@ -31,6 +31,7 @@ crawler/
     aggregate_run.py
     generate_run.py
     fetch_run.py
+    retry_failed_run.py
   tasks/
     wowhead_items.example.json
   tests/
@@ -159,8 +160,14 @@ manifest 中每个任务当前固定使用：
 - `python3 -m scripts.aggregate_run`
 - `python3 -m scripts.generate_run`
 - `python3 -m scripts.fetch_run`
+- `python3 -m scripts.retry_failed_run`
 
 脚本层只负责参数转发，不承载业务逻辑。
+
+其中：
+
+- `fetch_run` 只处理 `planned`
+- `retry_failed_run` 只处理 `failed`
 
 `crawler/core/aggregator.py` 负责：
 

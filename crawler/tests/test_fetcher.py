@@ -3,7 +3,12 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from core.fetcher import extract_listviewitems_json, fetch_manifest_results, parse_items_from_html
+from core.fetcher import (
+    extract_listviewitems_json,
+    fetch_manifest_results,
+    parse_items_from_html,
+    retry_failed_manifest_results,
+)
 
 
 SAMPLE_HTML = """
@@ -127,6 +132,110 @@ class FetcherTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
             self.assertFalse((temp_path / "rare-main-hand-dagger.json").exists())
+
+    def test_retry_failed_manifest_results_only_retries_failed_tasks(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 3,
+                        "tasks": [
+                            {
+                                "task_id": "planned-task",
+                                "status": "planned",
+                                "url": "https://example.com/planned",
+                                "category": "armor",
+                                "slot": "head",
+                                "type": "cloth",
+                                "quality": "uncommon",
+                                "query_filters": {},
+                            },
+                            {
+                                "task_id": "failed-task",
+                                "status": "failed",
+                                "url": "https://example.com/failed",
+                                "category": "armor",
+                                "slot": "head",
+                                "type": "cloth",
+                                "quality": "uncommon",
+                                "query_filters": {},
+                            },
+                            {
+                                "task_id": "fetched-task",
+                                "status": "fetched",
+                                "url": "https://example.com/fetched",
+                                "category": "armor",
+                                "slot": "head",
+                                "type": "cloth",
+                                "quality": "uncommon",
+                                "query_filters": {},
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            retry_failed_manifest_results(
+                manifest_path,
+                fetch_url=lambda _url: SAMPLE_HTML,
+            )
+
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
+            self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
+            self.assertEqual(updated_manifest["tasks"][2]["status"], "fetched")
+            self.assertTrue((temp_path / "failed-task.json").exists())
+            self.assertFalse((temp_path / "planned-task.json").exists())
+
+    def test_retry_failed_manifest_results_keeps_failed_status_when_retry_fails(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 1,
+                        "tasks": [
+                            {
+                                "task_id": "failed-task",
+                                "status": "failed",
+                                "url": "https://example.com/failed",
+                                "category": "weapon",
+                                "slot": "main_hand",
+                                "type": "dagger",
+                                "quality": "rare",
+                                "query_filters": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            def raise_error(_url):
+                raise RuntimeError("network error")
+
+            retry_failed_manifest_results(
+                manifest_path,
+                fetch_url=raise_error,
+            )
+
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
+            self.assertFalse((temp_path / "failed-task.json").exists())
 
 
 if __name__ == "__main__":
