@@ -17,15 +17,20 @@ crawler/
   core/
     __init__.py
     mappings.py
+    runner.py
     url_builder.py
+  outputs/
+    <run_id>/
+      manifest.json
   tasks/
     wowhead_items.example.json
   tests/
     test_mappings.py
+    test_runner.py
     test_url_builder.py
 ```
 
-当前阶段先实现 `mappings.py` 和 `url_builder.py`，其余抓取、解析、输出模块在后续阶段补齐。
+当前阶段先实现 `mappings.py`、`url_builder.py` 和 `runner.py`，其余抓取与解析模块在后续阶段补齐。
 
 ## 任务配置格式
 
@@ -116,6 +121,17 @@ URL 生成规则固定为：
 - `query_filters` 按固定顺序生成 `filter=` 查询参数
 - 如果存在 `query_string`，最终 URL 形如 `path?query_string`
 
+`crawler/core/runner.py` 负责：
+
+- 读取任务文件
+- 过滤 `enabled: true`
+- 生成单次运行清单
+- 写入 `outputs/<run_id>/manifest.json`
+
+manifest 中每个任务当前固定使用：
+
+- `status: "planned"`
+
 ## 中文标签规范
 
 所有 `label` 统一改为中文，便于后续日志、调试和结果展示复用。例如：
@@ -151,7 +167,8 @@ crawler/
 - `crawler` 最小 Python 工程骨架
 - 映射模块
 - URL 生成模块
+- 任务预执行 runner
 - 样例任务配置文件
-- 针对映射模块和 URL 生成器的 `unittest` 测试
+- 针对映射模块、URL 生成器和 runner 的 `unittest` 测试
 
-抓取器、调度器和输出写入模块留到下一阶段。
+抓取器、解析器和调度增强能力留到下一阶段。
