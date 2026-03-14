@@ -1,6 +1,6 @@
 # Wowhead Lua Export 设计
 
-**目标：** 将 `items.unique.json` 导出为 QuickDisenchant 可直接加载的 Lua 数据文件。
+**目标：** 仅在单次抓取运行全部成功时，将结果导出为 QuickDisenchant 可直接加载的 Lua 数据文件。
 
 ## 设计原则
 
@@ -13,7 +13,13 @@
 
 输入：
 
-- `crawler/outputs/<run_id>/items.unique.json`
+- `crawler/outputs/<run_id>/manifest.json`
+
+前置条件：
+
+- `manifest.json` 中所有任务状态都必须为 `fetched`
+- 同目录必须存在 `items.unique.json`
+- 只要还有 `planned` 或 `failed`，就禁止导出
 
 输出：
 
@@ -68,20 +74,30 @@ crawler/scripts/export_lua.py
 1. `render_lua_item_id_table(items)`
 - 把唯一物品列表渲染成 Lua 文本
 
-2. `write_lua_item_id_table(items_unique_path, output_path=None)`
-- 读取 `items.unique.json`
+2. `resolve_items_unique_path(manifest_path)`
+- 从 `manifest.json` 定位同目录下的 `items.unique.json`
+
+3. `validate_manifest_for_export(manifest)`
+- 校验所有任务都已经 `fetched`
+
+4. `write_lua_item_id_table(manifest_path, output_path=None)`
+- 读取 `manifest.json`
+- 校验运行是否完整
+- 再读取 `items.unique.json`
 - 写出 Lua 文件
 
 ## 调用方式
 
 ```bash
 cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
-python3 -m scripts.export_lua outputs/<run_id>/items.unique.json
+python3 -m scripts.export_lua outputs/<run_id>/manifest.json
 ```
 
 ## 测试策略
 
 - Lua 文本格式正确
 - `itemId` 升序输出
+- 仅完整 manifest 可导出
+- `failed` 和 `planned` 会阻止导出
 - 能写到插件目录
 - `.toc` 已接入新文件

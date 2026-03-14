@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Export unique Wowhead item IDs into a Lua data file that QuickDisenchant can load directly.
+**Goal:** Export unique Wowhead item IDs into a Lua data file only when the entire manifest has been fetched successfully.
 
-**Architecture:** Keep export separate from aggregation. A dedicated exporter reads `items.unique.json`, renders a stable Lua table of `itemId -> true`, writes a new Lua file into the addon folder, and the addon `.toc` loads that file before bag-scan logic runs.
+**Architecture:** Keep export separate from aggregation. A dedicated exporter reads `manifest.json`, validates that every task status is `fetched`, then loads the sibling `items.unique.json`, renders a stable Lua table of `itemId -> true`, and writes a new Lua file into the addon folder.
 
 **Tech Stack:** Python 3, unittest, JSON
 
@@ -21,13 +21,14 @@ Write tests that assert:
 
 - `render_lua_item_id_table()` produces a Lua table keyed by `itemId`
 - output is sorted by `itemId`
-- `write_lua_item_id_table()` writes a Lua file from `items.unique.json`
+- `write_lua_item_id_table()` writes a Lua file from a complete `manifest.json`
+- incomplete manifests with `failed` or `planned` tasks are rejected
 
 **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler && python3 -m unittest discover -s tests -p 'test_*.py'`
 
-Expected: FAIL because `core.lua_exporter` does not exist yet.
+Expected: FAIL because the exporter still reads `items.unique.json` directly.
 
 **Step 3: Write minimal implementation**
 
@@ -49,7 +50,7 @@ Run the same command and confirm failures now point to missing render/write beha
 
 Extend tests so they assert:
 
-- `scripts.export_lua.run()` writes the Lua file
+- `scripts.export_lua.run()` writes the Lua file from `manifest.json`
 - `QuickDisenchant.toc` contains `DisenchantableByWowhead.lua`
 
 **Step 2: Run test to verify it fails**
@@ -63,7 +64,9 @@ Expected: FAIL because the script and toc integration do not exist yet.
 Implement:
 
 - `render_lua_item_id_table(items)`
-- `write_lua_item_id_table(items_unique_path, output_path=None)`
+- `resolve_items_unique_path(manifest_path)`
+- `validate_manifest_for_export(manifest)`
+- `write_lua_item_id_table(manifest_path, output_path=None)`
 - `scripts.export_lua.run(argv=None)`
 - `.toc` entry for `DisenchantableByWowhead.lua`
 

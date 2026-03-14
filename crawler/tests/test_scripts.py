@@ -216,11 +216,29 @@ class ScriptsTest(unittest.TestCase):
             unique_items = json.loads((manifest_path.parent / "items.unique.json").read_text(encoding="utf-8"))
             self.assertEqual(unique_items, [{"itemId": 2620, "name": "Augural Shroud"}])
 
-    def test_export_lua_writes_lua_data_file(self):
+    def test_export_lua_writes_lua_data_file_from_complete_manifest(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
             items_unique_path = temp_path / "items.unique.json"
             output_path = temp_path / "DisenchantableByWowhead.lua"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 2,
+                        "tasks": [
+                            {"task_id": "task-a", "status": "fetched"},
+                            {"task_id": "task-b", "status": "fetched"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
             items_unique_path.write_text(
                 json.dumps(
                     [
@@ -233,11 +251,39 @@ class ScriptsTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            written_path = run_export_lua([str(items_unique_path), str(output_path)])
+            written_path = run_export_lua([str(manifest_path), str(output_path)])
 
             self.assertEqual(written_path, output_path)
             self.assertTrue(output_path.exists())
             self.assertIn("[1001] = true", output_path.read_text(encoding="utf-8"))
+
+    def test_export_lua_rejects_incomplete_manifest(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            output_path = temp_path / "DisenchantableByWowhead.lua"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 1,
+                        "tasks": [
+                            {"task_id": "task-a", "status": "failed"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (temp_path / "items.unique.json").write_text("[]", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "failed"):
+                run_export_lua([str(manifest_path), str(output_path)])
+
+            self.assertFalse(output_path.exists())
 
     def test_quickdisenchant_toc_includes_wowhead_data_file(self):
         toc_path = Path(__file__).resolve().parents[2] / "QuickDisenchant" / "QuickDisenchant.toc"

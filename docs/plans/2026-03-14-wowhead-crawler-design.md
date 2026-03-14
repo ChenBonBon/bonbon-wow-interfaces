@@ -195,7 +195,9 @@ manifest 中每个任务当前固定使用：
 
 `crawler/core/lua_exporter.py` 负责：
 
-- 读取 `items.unique.json`
+- 读取 `manifest.json`
+- 校验所有任务都已 `fetched`
+- 再读取同目录下的 `items.unique.json`
 - 导出为插件可直接加载的 Lua 数据文件
 
 目标文件为：
