@@ -24,6 +24,10 @@ crawler/
     <run_id>/
       manifest.json
       <task_id>.json
+  scripts/
+    __init__.py
+    generate_run.py
+    fetch_run.py
   tasks/
     wowhead_items.example.json
   tests/
@@ -146,6 +150,13 @@ manifest 中每个任务当前固定使用：
   - `fetched`
   - `failed`
 
+推荐执行入口为脚本层：
+
+- `python3 -m scripts.generate_run`
+- `python3 -m scripts.fetch_run`
+
+脚本层只负责参数转发，不承载业务逻辑。
+
 ## 中文标签规范
 
 所有 `label` 统一改为中文，便于后续日志、调试和结果展示复用。例如：
@@ -198,7 +209,8 @@ crawler/
 - URL 生成模块
 - 任务预执行 runner
 - manifest 驱动 fetcher
+- 薄脚本入口
 - 样例任务配置文件
-- 针对映射模块、URL 生成器、runner 和 fetcher 的 `unittest` 测试
+- 针对映射模块、URL 生成器、runner、fetcher 和脚本层的 `unittest` 测试
 
 抓取器、解析器和调度增强能力留到下一阶段。
