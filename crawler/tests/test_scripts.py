@@ -204,7 +204,7 @@ class ScriptsTest(unittest.TestCase):
             fake_python.chmod(0o755)
 
             result = subprocess.run(
-                [str(script_path), "outputs/filter_pages/normalized_mappings.json", "core/mappings.py"],
+                [str(script_path), "outputs/filter_pages/normalized_mappings.json", "core/mappings_data.py"],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -214,7 +214,7 @@ class ScriptsTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(
                 argv_file.read_text(encoding="utf-8").splitlines(),
-                ["-m", "scripts.generate_mappings", "outputs/filter_pages/normalized_mappings.json", "core/mappings.py"],
+                ["-m", "scripts.generate_mappings", "outputs/filter_pages/normalized_mappings.json", "core/mappings_data.py"],
             )
             self.assertEqual(cwd_file.read_text(encoding="utf-8").strip(), str(crawler_dir))
 
@@ -342,7 +342,7 @@ class ScriptsTest(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             normalized_path = temp_path / "normalized_mappings.json"
-            output_path = temp_path / "mappings.py"
+            output_path = temp_path / "mappings_data.py"
             normalized_path.write_text(
                 json.dumps(
                     {
@@ -379,6 +379,7 @@ class ScriptsTest(unittest.TestCase):
             self.assertIn('"main_hand_21"', module_text)
             self.assertIn('"daggers_15"', module_text)
             self.assertIn('"can_be_worn_equipped_195"', module_text)
+            self.assertNotIn("def normalize_task", module_text)
 
     def test_generate_normalized_mappings_reads_local_files_and_writes_output(self):
         with TemporaryDirectory() as temp_dir:

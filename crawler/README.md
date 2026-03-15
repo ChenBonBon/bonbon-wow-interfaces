@@ -6,7 +6,7 @@
 - 抓取结果并汇总
 - 导出 Lua 数据给 `QuickDisenchant`
 - 抓取 `Filter.init` 并生成 `normalized_mappings`
-- 根据 `normalized_mappings` 生成 `crawler/core/mappings.py`
+- 根据 `normalized_mappings` 生成 `crawler/core/mappings_data.py`
 
 ## 环境要求
 
@@ -97,12 +97,12 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 
 默认写入：
 
-- [core/mappings.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings.py)
+- [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
 
 也可以手动指定输入和输出：
 
 ```bash
-./bin/generate_mappings.sh outputs/filter_pages/normalized_mappings.json core/mappings.py
+./bin/generate_mappings.sh outputs/filter_pages/normalized_mappings.json core/mappings_data.py
 ```
 
 ### 5. 一键更新 mappings
@@ -119,7 +119,7 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
    - `armor`
    - `weapons`
 2. 生成 `normalized_mappings.json`
-3. 生成 [core/mappings.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings.py)
+3. 生成 [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
 
 如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
 
@@ -196,11 +196,16 @@ python3 -m scripts.generate_normalized_mappings
 
 - `outputs/filter_pages/normalized_mappings.json`
 
-生成 `mappings.py`：
+生成 `mappings_data.py`：
 
 ```bash
 python3 -m scripts.generate_mappings
 ```
+
+说明：
+
+- [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py) 是自动生成的数据层
+- [core/mappings.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings.py) 是手写逻辑层，只负责校验和辅助函数
 
 ## 任务文件格式
 

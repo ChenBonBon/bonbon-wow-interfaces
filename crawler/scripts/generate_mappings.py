@@ -2,15 +2,15 @@ import json
 import sys
 from pathlib import Path
 
-from core.mappings_generator import write_mappings_module
+from core.mappings_generator import write_mappings_data_module
 
 
 DEFAULT_NORMALIZED_PATH = Path("outputs/filter_pages/normalized_mappings.json")
-DEFAULT_OUTPUT_PATH = Path("core/mappings.py")
+DEFAULT_OUTPUT_PATH = Path("core/mappings_data.py")
 
 
 def run(argv=None):
-    """从 normalized_mappings.json 生成 crawler mappings 模块。"""
+    """从 normalized_mappings.json 生成 crawler mappings 数据模块。"""
     argv = list(argv or [])
     if len(argv) not in (0, 1, 2):
         raise SystemExit(
@@ -20,7 +20,7 @@ def run(argv=None):
     normalized_path = Path(argv[0]) if len(argv) >= 1 else DEFAULT_NORMALIZED_PATH
     output_path = Path(argv[1]) if len(argv) == 2 else DEFAULT_OUTPUT_PATH
     normalized_data = json.loads(normalized_path.read_text(encoding="utf-8"))
-    return write_mappings_module(output_path, normalized_data)
+    return write_mappings_data_module(output_path, normalized_data)
 
 
 def main():

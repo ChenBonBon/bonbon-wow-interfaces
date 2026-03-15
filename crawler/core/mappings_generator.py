@@ -77,12 +77,6 @@ CATEGORIES = {
     "armor": {"label": "护甲", "wowhead": {"path": "armor"}},
 }
 
-QUERY_FILTER_VALUE_MAP = {
-    "yes": 1,
-    "no": 2,
-    "any": None,
-}
-
 DEFAULT_QUERY_FILTER_ORDER = (
     ("Available to players", 161),
     ("Can be worn/equipped", 195),
@@ -151,14 +145,12 @@ def build_generated_mappings_data(normalized_data):
     ) + tuple(
         key
         for key in sorted(query_filters)
-        if key
-        not in {
-            normalize_label_to_key(label, value) for label, value in DEFAULT_QUERY_FILTER_ORDER
-        }
+        if key not in {normalize_label_to_key(label, value) for label, value in DEFAULT_QUERY_FILTER_ORDER}
     )
 
     return {
         "QUALITIES": qualities,
+        "CATEGORIES": CATEGORIES,
         "SLOTS": slots,
         "CATEGORY_TYPES": category_types,
         "QUERY_FILTERS": query_filters,
@@ -166,7 +158,7 @@ def build_generated_mappings_data(normalized_data):
     }
 
 
-def _render_json_assignment(name, value):
+def _render_assignment(name, value):
     rendered = json.dumps(value, ensure_ascii=False, indent=4)
     rendered = rendered.replace(": null", ": None")
     rendered = rendered.replace(": true", ": True")
@@ -181,77 +173,26 @@ def _render_tuple(value):
     return f"({items})"
 
 
-def render_mappings_module(normalized_data):
+def render_mappings_data_module(normalized_data):
     generated = build_generated_mappings_data(normalized_data)
     sections = [
-        "from copy import deepcopy\n\n\n",
-        _render_json_assignment("QUALITIES", generated["QUALITIES"]),
+        _render_assignment("QUALITIES", generated["QUALITIES"]),
         "\n",
-        "QUERY_FILTER_VALUE_MAP = {\n    \"yes\": 1,\n    \"no\": 2,\n    \"any\": None,\n}\n\n",
-        _render_json_assignment("CATEGORIES", CATEGORIES),
+        _render_assignment("CATEGORIES", generated["CATEGORIES"]),
         "\n",
-        _render_json_assignment("SLOTS", generated["SLOTS"]),
+        _render_assignment("SLOTS", generated["SLOTS"]),
         "\n",
-        _render_json_assignment("CATEGORY_TYPES", generated["CATEGORY_TYPES"]),
+        _render_assignment("CATEGORY_TYPES", generated["CATEGORY_TYPES"]),
         "\n",
-        _render_json_assignment("QUERY_FILTERS", generated["QUERY_FILTERS"]),
+        _render_assignment("QUERY_FILTERS", generated["QUERY_FILTERS"]),
         "\n",
-        "QUERY_FILTER_ORDER = " + _render_tuple(generated["QUERY_FILTER_ORDER"]) + "\n\n",
-        "REQUIRED_TASK_FIELDS = (\"task_id\", \"quality\", \"category\", \"slot\", \"type\")\n\n\n",
-        "def get_category_type_meta(category, type_name):\n"
-        "    category_meta = CATEGORY_TYPES.get(category)\n"
-        "    if category_meta is None:\n"
-        "        raise ValueError(f\"未知 category: {category}\")\n\n"
-        "    type_meta = category_meta.get(type_name)\n"
-        "    if type_meta is None:\n"
-        "        raise ValueError(f\"未知 type: {category}.{type_name}\")\n\n"
-        "    return deepcopy(type_meta)\n\n\n",
-        "def normalize_task(task):\n"
-        "    normalized = deepcopy(task)\n"
-        "    normalized.setdefault(\"enabled\", True)\n"
-        "    normalized.setdefault(\"query_filters\", {})\n"
-        "    return normalized\n\n\n",
-        "def validate_task(task):\n"
-        "    normalized = normalize_task(task)\n\n"
-        "    for field_name in REQUIRED_TASK_FIELDS:\n"
-        "        value = normalized.get(field_name)\n"
-        "        if not isinstance(value, str) or value == \"\":\n"
-        "            raise ValueError(f\"任务字段缺失或非法: {field_name}\")\n\n"
-        "    if not isinstance(normalized[\"enabled\"], bool):\n"
-        "        raise ValueError(\"任务字段缺失或非法: enabled\")\n\n"
-        "    if not isinstance(normalized[\"query_filters\"], dict):\n"
-        "        raise ValueError(\"任务字段缺失或非法: query_filters\")\n\n"
-        "    if normalized[\"quality\"] not in QUALITIES:\n"
-        "        raise ValueError(f\"未知 quality: {normalized['quality']}\")\n\n"
-        "    if normalized[\"category\"] not in CATEGORIES:\n"
-        "        raise ValueError(f\"未知 category: {normalized['category']}\")\n\n"
-        "    if normalized[\"slot\"] not in SLOTS:\n"
-        "        raise ValueError(f\"未知 slot: {normalized['slot']}\")\n\n"
-        "    get_category_type_meta(normalized[\"category\"], normalized[\"type\"])\n\n"
-        "    for filter_name, filter_value in normalized[\"query_filters\"].items():\n"
-        "        filter_meta = QUERY_FILTERS.get(filter_name)\n"
-        "        if filter_meta is None:\n"
-        "            raise ValueError(f\"未知 query_filter: {filter_name}\")\n\n"
-        "        if filter_value not in filter_meta[\"values\"]:\n"
-        "            raise ValueError(f\"未知 query_filter 值: {filter_name}.{filter_value}\")\n\n\n",
-        "def build_task_slug(task):\n"
-        "    normalized = normalize_task(task)\n"
-        "    validate_task(normalized)\n"
-        "    return \"-\".join((normalized[\"quality\"], normalized[\"slot\"], normalized[\"type\"]))\n\n\n",
-        "def describe_task(task):\n"
-        "    normalized = normalize_task(task)\n"
-        "    validate_task(normalized)\n\n"
-        "    return \" \".join((\n"
-        "        QUALITIES[normalized[\"quality\"]][\"label\"],\n"
-        "        SLOTS[normalized[\"slot\"]][\"label\"],\n"
-        "        CATEGORY_TYPES[normalized[\"category\"]][normalized[\"type\"]][\"label\"],\n"
-        "    ))\n",
+        "QUERY_FILTER_ORDER = " + _render_tuple(generated["QUERY_FILTER_ORDER"]) + "\n",
     ]
     return "".join(sections)
 
 
-def write_mappings_module(output_path, normalized_data):
+def write_mappings_data_module(output_path, normalized_data):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(render_mappings_module(normalized_data), encoding="utf-8")
+    output_path.write_text(render_mappings_data_module(normalized_data), encoding="utf-8")
     return output_path

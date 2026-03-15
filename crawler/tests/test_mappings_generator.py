@@ -6,8 +6,8 @@ from tempfile import TemporaryDirectory
 from core.mappings_generator import (
     build_generated_mappings_data,
     normalize_label_to_key,
-    render_mappings_module,
-    write_mappings_module,
+    render_mappings_data_module,
+    write_mappings_data_module,
 )
 
 
@@ -63,8 +63,8 @@ class MappingsGeneratorTest(unittest.TestCase):
         self.assertEqual(generated["CATEGORY_TYPES"]["weapon"]["daggers_15"]["wowhead"], {"facet": "type", "value": 15})
         self.assertEqual(generated["QUERY_FILTERS"]["can_be_worn_equipped_195"]["wowhead"], {"id": 195})
 
-    def test_render_mappings_module_contains_generated_keys_and_values(self):
-        module_text = render_mappings_module(NORMALIZED_MAPPINGS)
+    def test_render_mappings_data_module_contains_generated_keys_and_values(self):
+        module_text = render_mappings_data_module(NORMALIZED_MAPPINGS)
 
         self.assertIn('"main_hand_21"', module_text)
         self.assertIn('"cloth_armor_1"', module_text)
@@ -72,11 +72,13 @@ class MappingsGeneratorTest(unittest.TestCase):
         self.assertIn('"can_be_worn_equipped_195"', module_text)
         self.assertIn('"available_to_players_161"', module_text)
         self.assertIn('QUERY_FILTER_ORDER = ("available_to_players_161", "can_be_worn_equipped_195", "disenchantable_8")', module_text)
+        self.assertNotIn("def normalize_task", module_text)
+        self.assertNotIn("def validate_task", module_text)
 
-    def test_write_mappings_module_writes_python_file(self):
+    def test_write_mappings_data_module_writes_python_file(self):
         with TemporaryDirectory() as temp_dir:
-            output_path = Path(temp_dir) / "mappings.py"
-            written_path = write_mappings_module(output_path, NORMALIZED_MAPPINGS)
+            output_path = Path(temp_dir) / "mappings_data.py"
+            written_path = write_mappings_data_module(output_path, NORMALIZED_MAPPINGS)
 
             self.assertEqual(written_path, output_path)
             module_text = output_path.read_text(encoding="utf-8")
