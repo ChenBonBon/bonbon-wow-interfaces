@@ -22,6 +22,7 @@ Add a test that asserts:
 - `crawler/bin/fetch_filter_init.sh` exists and is executable
 - it invokes `python3 -m scripts.fetch_filter_page <url> outputs/filter_pages/filter-page.html`
 - it then invokes `python3 -m scripts.extract_filter_init outputs/filter_pages/filter-page.html`
+- when given a second argument, it uses `outputs/filter_pages/<name>.html`
 
 **Step 2: Run test to verify it fails**
 
@@ -37,6 +38,7 @@ Create the wrapper with:
 - strict shell flags
 - repo-relative `cd`
 - fixed default HTML output path
+- optional second argument for custom output base name
 - the two Python invocations in order
 
 **Step 4: Run test to verify it passes**

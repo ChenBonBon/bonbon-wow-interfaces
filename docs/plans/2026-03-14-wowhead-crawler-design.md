@@ -202,6 +202,7 @@ manifest 中每个任务当前固定使用：
 
 - 先抓取页面到 `outputs/filter_pages/filter-page.html`
 - 再从这份本地 HTML 提取 `Filter.init(...)`
+- 传第二个参数时，输出会变成 `outputs/filter_pages/<name>.html`
 
 其中：
 
