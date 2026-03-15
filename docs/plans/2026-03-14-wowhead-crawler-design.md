@@ -14,6 +14,7 @@
 ```text
 crawler/
   bin/
+    fetch_filter_init.sh
     run_all.sh
     retry_failed.sh
   pyproject.toml
@@ -174,6 +175,7 @@ manifest 中每个任务当前固定使用：
 
 - `./bin/run_all.sh`
 - `./bin/retry_failed.sh`
+- `./bin/fetch_filter_init.sh`
 - `python3 -m scripts.aggregate_run`
 - `python3 -m scripts.extract_filter_init`
 - `python3 -m scripts.export_lua`
@@ -195,6 +197,11 @@ manifest 中每个任务当前固定使用：
 
 - 无参数时默认使用 `tasks/wowhead_items.json`
 - 显式传参时优先使用你提供的任务文件与输出目录
+
+其中 `./bin/fetch_filter_init.sh` 会：
+
+- 先抓取页面到 `outputs/filter_pages/filter-page.html`
+- 再从这份本地 HTML 提取 `Filter.init(...)`
 
 其中：
 

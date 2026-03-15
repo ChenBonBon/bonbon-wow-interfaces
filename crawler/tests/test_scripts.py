@@ -96,6 +96,50 @@ class ScriptsTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Usage: python3 -m scripts.retry_failed_run", result.stderr)
 
+    def test_fetch_filter_init_shell_wrapper_runs_fetch_then_extract(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "fetch_filter_init.sh"
+
+        self.assertTrue(script_path.exists())
+        self.assertTrue(os.access(script_path, os.X_OK))
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python3"
+            argv_log = temp_path / "argv.log"
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$@\" >> \"{argv_log}\"\n"
+                "printf -- '---\\n' >> \""
+                + str(argv_log)
+                + "\"\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
+
+            result = subprocess.run(
+                [str(script_path), "https://www.wowhead.com/items"],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={**os.environ, "PATH": f"{temp_path}:{os.environ['PATH']}"},
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                argv_log.read_text(encoding="utf-8").splitlines(),
+                [
+                    "-m",
+                    "scripts.fetch_filter_page",
+                    "https://www.wowhead.com/items",
+                    "outputs/filter_pages/filter-page.html",
+                    "---",
+                    "-m",
+                    "scripts.extract_filter_init",
+                    "outputs/filter_pages/filter-page.html",
+                    "---",
+                ],
+            )
+
     def test_generate_run_creates_manifest_file(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
