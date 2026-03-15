@@ -21,6 +21,7 @@ crawler/
     __init__.py
     aggregator.py
     fetcher.py
+    filter_init.py
     lua_exporter.py
     mappings.py
     runner.py
@@ -33,7 +34,9 @@ crawler/
   scripts/
     __init__.py
     aggregate_run.py
+    extract_filter_init.py
     export_lua.py
+    fetch_filter_page.py
     generate_run.py
     fetch_run.py
     run_all.py
@@ -172,7 +175,9 @@ manifest 中每个任务当前固定使用：
 - `./bin/run_all.sh`
 - `./bin/retry_failed.sh`
 - `python3 -m scripts.aggregate_run`
+- `python3 -m scripts.extract_filter_init`
 - `python3 -m scripts.export_lua`
+- `python3 -m scripts.fetch_filter_page`
 - `python3 -m scripts.generate_run`
 - `python3 -m scripts.fetch_run`
 - `python3 -m scripts.run_all`
@@ -196,6 +201,17 @@ manifest 中每个任务当前固定使用：
 - `fetch_run` 只处理 `planned`
 - `run_all` 默认执行 `generate -> fetch -> aggregate -> export`
 - `retry_failed_run` 先处理 `failed`，再执行全量 `aggregate -> export`
+
+新增的 `Filter.init` 工具链采用两阶段：
+
+1. `fetch_filter_page`
+- 请求 Wowhead 页面
+- 把原始 HTML 保存到本地
+
+2. `extract_filter_init`
+- 读取本地 HTML
+- 提取 `Filter.init(...)`
+- 导出原始 JSON
 
 `crawler/core/aggregator.py` 负责：
 
