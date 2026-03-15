@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from scripts.aggregate_run import run as run_aggregate
 from scripts.export_lua import run as run_export_lua
 from scripts.fetch_run import run as run_fetch
+from scripts.generate_normalized_mappings import run as run_generate_normalized_mappings
 from scripts.generate_run import run as run_generate
 from scripts.retry_failed_run import run as run_retry_failed
 from scripts.run_all import run as run_all
@@ -183,6 +184,55 @@ class ScriptsTest(unittest.TestCase):
                     "---",
                 ],
             )
+
+    def test_generate_normalized_mappings_reads_local_files_and_writes_output(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            armor_html = temp_path / "armor.html"
+            armor_filters = temp_path / "armor.filters.json"
+            weapons_html = temp_path / "weapons.html"
+            weapons_filters = temp_path / "weapons.filters.json"
+            output_path = temp_path / "normalized_mappings.json"
+
+            armor_html.write_text(
+                '<select id="filter-facet-quality"><option value="2">Uncommon</option><option value="3">Rare</option><option value="4">Epic</option></select>'
+                '<select id="filter-facet-slot"><option value="1">Head</option></select>'
+                '<select id="filter-facet-type"><option value="1">Cloth Armor</option></select>',
+                encoding="utf-8",
+            )
+            weapons_html.write_text(
+                '<select id="filter-facet-quality"><option value="2">Uncommon</option><option value="3">Rare</option><option value="4">Epic</option></select>'
+                '<select id="filter-facet-slot"><option value="21">Main Hand</option></select>'
+                '<select id="filter-facet-type"><option value="15">Daggers</option></select>',
+                encoding="utf-8",
+            )
+            filters_json = json.dumps(
+                {
+                    "filters": [
+                        {"id": 8, "name": "Disenchantable", "options": [[1, "Yes"], [2, "No"]]},
+                        {"id": 161, "name": "Available to players", "options": [[1, "Yes"], [2, "No"]]},
+                        {"id": 195, "name": "Can be worn/equipped", "options": [[1, "Yes"], [2, "No"]]},
+                    ]
+                },
+                ensure_ascii=False,
+            )
+            armor_filters.write_text(filters_json, encoding="utf-8")
+            weapons_filters.write_text(filters_json, encoding="utf-8")
+
+            written_path = run_generate_normalized_mappings(
+                [
+                    str(armor_html),
+                    str(armor_filters),
+                    str(weapons_html),
+                    str(weapons_filters),
+                    str(output_path),
+                ]
+            )
+
+            self.assertEqual(written_path, output_path)
+            written = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(written["categories"]["armor"]["path"], "armor")
+            self.assertEqual(written["types"]["weapon"], [{"value": 15, "label": "Daggers"}])
 
     def test_generate_run_creates_manifest_file(self):
         with TemporaryDirectory() as temp_dir:
