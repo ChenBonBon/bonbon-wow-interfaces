@@ -186,6 +186,38 @@ class ScriptsTest(unittest.TestCase):
                 ],
             )
 
+    def test_generate_mappings_shell_wrapper_runs_script_from_crawler_dir(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "generate_mappings.sh"
+        crawler_dir = Path(__file__).resolve().parents[1]
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python3"
+            argv_file = temp_path / "argv.txt"
+            cwd_file = temp_path / "cwd.txt"
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$@\" > \"{argv_file}\"\n"
+                f"pwd > \"{cwd_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
+
+            result = subprocess.run(
+                [str(script_path), "outputs/filter_pages/normalized_mappings.json", "core/mappings.py"],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={**os.environ, "PATH": f"{temp_path}:{os.environ['PATH']}"},
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                argv_file.read_text(encoding="utf-8").splitlines(),
+                ["-m", "scripts.generate_mappings", "outputs/filter_pages/normalized_mappings.json", "core/mappings.py"],
+            )
+            self.assertEqual(cwd_file.read_text(encoding="utf-8").strip(), str(crawler_dir))
+
     def test_generate_mappings_reads_normalized_json_and_writes_module(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
