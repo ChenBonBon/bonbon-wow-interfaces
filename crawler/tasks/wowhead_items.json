@@ -2,40 +2,40 @@
   {
     "task_id": "uncommon-main-hand-dagger",
     "enabled": true,
-    "quality": "uncommon",
+    "quality": "uncommon_2",
     "category": "weapon",
-    "slot": "main_hand",
-    "type": "dagger",
+    "slot": "main_hand_21",
+    "type": "daggers_15",
     "query_filters": {
-      "available_to_players": "yes",
-      "can_be_worn": "yes",
-      "disenchantable": "no"
+      "available_to_players_161": "yes",
+      "can_be_worn_equipped_195": "yes",
+      "disenchantable_8": "no"
     }
   },
   {
     "task_id": "rare-main-hand-dagger",
     "enabled": true,
-    "quality": "rare",
+    "quality": "rare_3",
     "category": "weapon",
-    "slot": "main_hand",
-    "type": "dagger",
+    "slot": "main_hand_21",
+    "type": "daggers_15",
     "query_filters": {
-      "available_to_players": "yes",
-      "can_be_worn": "yes",
-      "disenchantable": "no"
+      "available_to_players_161": "yes",
+      "can_be_worn_equipped_195": "yes",
+      "disenchantable_8": "no"
     }
   },
   {
     "task_id": "epic-main-hand-dagger",
     "enabled": true,
-    "quality": "epic",
+    "quality": "epic_4",
     "category": "weapon",
-    "slot": "main_hand",
-    "type": "dagger",
+    "slot": "main_hand_21",
+    "type": "daggers_15",
     "query_filters": {
-      "available_to_players": "yes",
-      "can_be_worn": "yes",
-      "disenchantable": "no"
+      "available_to_players_161": "yes",
+      "can_be_worn_equipped_195": "yes",
+      "disenchantable_8": "no"
     }
   }
 ]

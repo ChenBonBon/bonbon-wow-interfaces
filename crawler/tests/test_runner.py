@@ -13,22 +13,22 @@ class RunnerTest(unittest.TestCase):
         self.enabled_task = {
             "task_id": "uncommon-head-cloth",
             "enabled": True,
-            "quality": "uncommon",
+            "quality": "uncommon_2",
             "category": "armor",
-            "slot": "head",
-            "type": "cloth",
+            "slot": "head_1",
+            "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players": "yes",
-                "can_be_worn": "yes",
+                "available_to_players_161": "yes",
+                "can_be_worn_equipped_195": "yes",
             },
         }
         self.disabled_task = {
             "task_id": "rare-main-hand-dagger",
             "enabled": False,
-            "quality": "rare",
+            "quality": "rare_3",
             "category": "weapon",
-            "slot": "main_hand",
-            "type": "dagger",
+            "slot": "main_hand_21",
+            "type": "daggers_15",
         }
 
     def test_build_run_manifest_only_includes_enabled_tasks(self):

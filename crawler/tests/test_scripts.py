@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from scripts.aggregate_run import run as run_aggregate
 from scripts.export_lua import run as run_export_lua
 from scripts.fetch_run import run as run_fetch
+from scripts.generate_mappings import run as run_generate_mappings
 from scripts.generate_normalized_mappings import run as run_generate_normalized_mappings
 from scripts.generate_run import run as run_generate
 from scripts.retry_failed_run import run as run_retry_failed
@@ -185,6 +186,48 @@ class ScriptsTest(unittest.TestCase):
                 ],
             )
 
+    def test_generate_mappings_reads_normalized_json_and_writes_module(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            normalized_path = temp_path / "normalized_mappings.json"
+            output_path = temp_path / "mappings.py"
+            normalized_path.write_text(
+                json.dumps(
+                    {
+                        "categories": {"armor": {"path": "armor"}, "weapon": {"path": "weapons"}},
+                        "qualities": [
+                            {"value": 2, "label": "Uncommon"},
+                            {"value": 3, "label": "Rare"},
+                            {"value": 4, "label": "Epic"},
+                        ],
+                        "slots": [
+                            {"value": 1, "label": "Head"},
+                            {"value": 21, "label": "Main Hand"},
+                        ],
+                        "types": {
+                            "armor": [{"value": 1, "label": "Cloth Armor"}],
+                            "weapon": [{"value": 15, "label": "Daggers"}],
+                        },
+                        "query_filters": [
+                            {"id": 8, "label": "Disenchantable", "values": [{"value": 1, "label": "Yes"}, {"value": 2, "label": "No"}]},
+                            {"id": 161, "label": "Available to players", "values": [{"value": 1, "label": "Yes"}, {"value": 2, "label": "No"}]},
+                            {"id": 195, "label": "Can be worn/equipped", "values": [{"value": 1, "label": "Yes"}, {"value": 2, "label": "No"}]},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            written_path = run_generate_mappings([str(normalized_path), str(output_path)])
+
+            self.assertEqual(written_path, output_path)
+            module_text = output_path.read_text(encoding="utf-8")
+            self.assertIn('"main_hand_21"', module_text)
+            self.assertIn('"daggers_15"', module_text)
+            self.assertIn('"can_be_worn_equipped_195"', module_text)
+
     def test_generate_normalized_mappings_reads_local_files_and_writes_output(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -244,10 +287,10 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "uncommon-head-cloth",
                             "enabled": True,
-                            "quality": "uncommon",
+                            "quality": "uncommon_2",
                             "category": "armor",
-                            "slot": "head",
-                            "type": "cloth",
+                            "slot": "head_1",
+                            "type": "cloth_armor_1",
                             "query_filters": {},
                         }
                     ],
@@ -281,9 +324,9 @@ class ScriptsTest(unittest.TestCase):
                                 "status": "planned",
                                 "url": "https://example.com/items/1",
                                 "category": "armor",
-                                "slot": "head",
-                                "type": "cloth",
-                                "quality": "uncommon",
+                                "slot": "head_1",
+                                "type": "cloth_armor_1",
+                                "quality": "uncommon_2",
                                 "query_filters": {},
                             }
                         ],
@@ -475,10 +518,10 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "uncommon-head-cloth",
                             "enabled": True,
-                            "quality": "uncommon",
+                            "quality": "uncommon_2",
                             "category": "armor",
-                            "slot": "head",
-                            "type": "cloth",
+                            "slot": "head_1",
+                            "type": "cloth_armor_1",
                             "query_filters": {},
                         }
                     ],
@@ -511,10 +554,10 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "will-fail",
                             "enabled": True,
-                            "quality": "uncommon",
+                            "quality": "uncommon_2",
                             "category": "armor",
-                            "slot": "head",
-                            "type": "cloth",
+                            "slot": "head_1",
+                            "type": "cloth_armor_1",
                             "query_filters": {},
                         }
                     ],
