@@ -29,7 +29,27 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 
 下面保留的分步命令，主要用于排查问题或单独重跑某一环节。
 
-### 1. 运行完整抓取流程
+### 1. 一键更新 mappings
+
+命令：
+
+```bash
+./bin/update_mappings.sh
+```
+
+这一步应该先执行。它会顺序完成：
+
+1. 并行抓取：
+   - `armor`
+   - `weapons`
+2. 生成 `normalized_mappings.json`
+3. 生成 [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
+
+这样可以确保后续任务文件里使用的 key，与当前 Wowhead 的筛选数据保持一致。
+
+如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
+
+### 2. 运行完整抓取流程
 
 默认读取：
 
@@ -55,7 +75,7 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 4. 导出 Lua 到：
    - [DisenchantableByWowhead.lua](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/QuickDisenchant/DisenchantableByWowhead.lua)
 
-### 2. 重跑失败任务
+### 3. 重跑失败任务
 
 命令：
 
@@ -70,24 +90,6 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 3. 重新导出 Lua
 
 如果 `manifest.json` 里还有未完成任务，导出会直接失败，不会写入残缺 Lua。
-
-### 3. 一键更新 mappings
-
-命令：
-
-```bash
-./bin/update_mappings.sh
-```
-
-这条命令会顺序执行：
-
-1. 并行抓取：
-   - `armor`
-   - `weapons`
-2. 生成 `normalized_mappings.json`
-3. 生成 [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
-
-如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
 
 ### 4. 调试用：单独抓取 Filter.init
 
@@ -268,9 +270,7 @@ python3 -m scripts.generate_mappings
 
 ## 常用顺序
 
-### 更新 mappings
-
-正常情况下，直接执行：
+### 1. 先更新 mappings
 
 ```bash
 ./bin/update_mappings.sh
@@ -285,7 +285,7 @@ python3 -m scripts.generate_normalized_mappings
 ./bin/generate_mappings.sh
 ```
 
-### 日常抓取并更新插件数据
+### 2. 再抓取并更新插件数据
 
 ```bash
 ./bin/run_all.sh
