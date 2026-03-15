@@ -19,6 +19,16 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 
 ## 推荐入口
 
+`mappings` 的日常更新现在推荐只走一个总入口：
+
+```bash
+./bin/update_mappings.sh
+```
+
+它会自动完成：并行抓取 `armor/weapons` 的 `Filter.init`、生成 `normalized_mappings.json`、再生成 `core/mappings_data.py`。
+
+下面保留的分步命令，主要用于排查问题或单独重跑某一环节。
+
 ### 1. 运行完整抓取流程
 
 默认读取：
@@ -61,7 +71,25 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 
 如果 `manifest.json` 里还有未完成任务，导出会直接失败，不会写入残缺 Lua。
 
-### 3. 抓取 Filter.init
+### 3. 一键更新 mappings
+
+命令：
+
+```bash
+./bin/update_mappings.sh
+```
+
+这条命令会顺序执行：
+
+1. 并行抓取：
+   - `armor`
+   - `weapons`
+2. 生成 `normalized_mappings.json`
+3. 生成 [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
+
+如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
+
+### 4. 调试用：单独抓取 Filter.init
 
 命令：
 
@@ -83,7 +111,7 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 - `filter-page.html`
 - `filter-page.filters.json`
 
-### 4. 生成 mappings
+### 5. 调试用：单独生成 mappings 数据
 
 命令：
 
@@ -104,24 +132,6 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 ```bash
 ./bin/generate_mappings.sh outputs/filter_pages/normalized_mappings.json core/mappings_data.py
 ```
-
-### 5. 一键更新 mappings
-
-命令：
-
-```bash
-./bin/update_mappings.sh
-```
-
-这条命令会顺序执行：
-
-1. 并行抓取：
-   - `armor`
-   - `weapons`
-2. 生成 `normalized_mappings.json`
-3. 生成 [core/mappings_data.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings_data.py)
-
-如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
 
 ## Python 脚本入口
 
@@ -166,6 +176,14 @@ python3 -m scripts.retry_failed_run outputs/<run_id>/manifest.json
 ```
 
 ### Filter.init 与 mappings 流程
+
+推荐优先使用：
+
+```bash
+./bin/update_mappings.sh
+```
+
+下面这些 Python 命令只在你需要排查、单步调试、或单独重跑某一环节时使用。正常情况下，不需要手动分别执行“抓 Filter.init”和“生成 mappings”。
 
 抓 HTML：
 
@@ -250,6 +268,23 @@ python3 -m scripts.generate_mappings
 
 ## 常用顺序
 
+### 更新 mappings
+
+正常情况下，直接执行：
+
+```bash
+./bin/update_mappings.sh
+```
+
+如果你要手动逐步排查，再按下面的拆分命令执行：
+
+```bash
+./bin/fetch_filter_init.sh "https://www.wowhead.com/items/armor" armor
+./bin/fetch_filter_init.sh "https://www.wowhead.com/items/weapons" weapons
+python3 -m scripts.generate_normalized_mappings
+./bin/generate_mappings.sh
+```
+
 ### 日常抓取并更新插件数据
 
 ```bash
@@ -260,19 +295,4 @@ python3 -m scripts.generate_mappings
 
 ```bash
 ./bin/retry_failed.sh outputs/<run_id>/manifest.json
-```
-
-### 更新 mappings
-
-```bash
-./bin/fetch_filter_init.sh "https://www.wowhead.com/items/armor" armor
-./bin/fetch_filter_init.sh "https://www.wowhead.com/items/weapons" weapons
-python3 -m scripts.generate_normalized_mappings
-./bin/generate_mappings.sh
-```
-
-或者直接：
-
-```bash
-./bin/update_mappings.sh
 ```
