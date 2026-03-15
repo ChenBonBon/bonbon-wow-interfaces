@@ -218,6 +218,120 @@ class ScriptsTest(unittest.TestCase):
             )
             self.assertEqual(cwd_file.read_text(encoding="utf-8").strip(), str(crawler_dir))
 
+    def test_update_mappings_shell_wrapper_runs_parallel_fetch_then_generators(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "update_mappings.sh"
+        crawler_dir = Path(__file__).resolve().parents[1]
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            log_file = temp_path / "calls.log"
+            fake_python = temp_path / "python3"
+            fake_fetch = temp_path / "fetch_filter_init.sh"
+            fake_generate = temp_path / "generate_mappings.sh"
+
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf 'python %s\\n' \"$*\" >> \"{log_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_fetch.write_text(
+                "#!/bin/sh\n"
+                f"printf 'fetch %s %s %s\\n' \"$1\" \"$2\" \"$(pwd)\" >> \"{log_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_generate.write_text(
+                "#!/bin/sh\n"
+                f"printf 'generate %s\\n' \"$(pwd)\" >> \"{log_file}\"\n",
+                encoding="utf-8",
+            )
+
+            fake_python.chmod(0o755)
+            fake_fetch.chmod(0o755)
+            fake_generate.chmod(0o755)
+
+            result = subprocess.run(
+                [str(script_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={
+                    **os.environ,
+                    "PYTHON_BIN": str(fake_python),
+                    "FETCH_FILTER_INIT_BIN": str(fake_fetch),
+                    "GENERATE_MAPPINGS_BIN": str(fake_generate),
+                },
+            )
+
+            self.assertEqual(result.returncode, 0)
+            lines = log_file.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                set(lines[:2]),
+                {
+                    f"fetch https://www.wowhead.com/items/armor armor {crawler_dir}",
+                    f"fetch https://www.wowhead.com/items/weapons weapons {crawler_dir}",
+                },
+            )
+            self.assertEqual(
+                lines[2:],
+                [
+                    "python -m scripts.generate_normalized_mappings",
+                    f"generate {crawler_dir}",
+                ],
+            )
+
+    def test_update_mappings_shell_wrapper_stops_when_fetch_fails(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "update_mappings.sh"
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            log_file = temp_path / "calls.log"
+            fake_python = temp_path / "python3"
+            fake_fetch = temp_path / "fetch_filter_init.sh"
+            fake_generate = temp_path / "generate_mappings.sh"
+
+            fake_python.write_text(
+                "#!/bin/sh\n"
+                f"printf 'python called\\n' >> \"{log_file}\"\n",
+                encoding="utf-8",
+            )
+            fake_fetch.write_text(
+                "#!/bin/sh\n"
+                f"printf 'fetch %s %s\\n' \"$1\" \"$2\" >> \"{log_file}\"\n"
+                "if [ \"$2\" = \"weapons\" ]; then\n"
+                "  exit 9\n"
+                "fi\n",
+                encoding="utf-8",
+            )
+            fake_generate.write_text(
+                "#!/bin/sh\n"
+                f"printf 'generate called\\n' >> \"{log_file}\"\n",
+                encoding="utf-8",
+            )
+
+            fake_python.chmod(0o755)
+            fake_fetch.chmod(0o755)
+            fake_generate.chmod(0o755)
+
+            result = subprocess.run(
+                [str(script_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={
+                    **os.environ,
+                    "PYTHON_BIN": str(fake_python),
+                    "FETCH_FILTER_INIT_BIN": str(fake_fetch),
+                    "GENERATE_MAPPINGS_BIN": str(fake_generate),
+                },
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            lines = log_file.read_text(encoding="utf-8").splitlines()
+            self.assertIn("fetch https://www.wowhead.com/items/armor armor", lines)
+            self.assertIn("fetch https://www.wowhead.com/items/weapons weapons", lines)
+            self.assertNotIn("python called", lines)
+            self.assertNotIn("generate called", lines)
+
     def test_generate_mappings_reads_normalized_json_and_writes_module(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

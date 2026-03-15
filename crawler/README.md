@@ -105,6 +105,24 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 ./bin/generate_mappings.sh outputs/filter_pages/normalized_mappings.json core/mappings.py
 ```
 
+### 5. 一键更新 mappings
+
+命令：
+
+```bash
+./bin/update_mappings.sh
+```
+
+这条命令会顺序执行：
+
+1. 并行抓取：
+   - `armor`
+   - `weapons`
+2. 生成 `normalized_mappings.json`
+3. 生成 [core/mappings.py](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/core/mappings.py)
+
+如果 `armor` 或 `weapons` 任意一个抓取失败，脚本会直接退出，不会继续后续步骤。
+
 ## Python 脚本入口
 
 如果你不想走 `bin/` 下的 shell wrapper，也可以直接运行 Python 模块。
@@ -246,4 +264,10 @@ python3 -m scripts.generate_mappings
 ./bin/fetch_filter_init.sh "https://www.wowhead.com/items/weapons" weapons
 python3 -m scripts.generate_normalized_mappings
 ./bin/generate_mappings.sh
+```
+
+或者直接：
+
+```bash
+./bin/update_mappings.sh
 ```
