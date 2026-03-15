@@ -263,6 +263,10 @@ class ScriptsTest(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0)
+            self.assertIn("Starting parallel Filter.init fetch for armor and weapons...", result.stdout)
+            self.assertIn("Generating normalized mappings...", result.stdout)
+            self.assertIn("Generating crawler mappings module...", result.stdout)
+            self.assertIn("Mappings update completed successfully.", result.stdout)
             lines = log_file.read_text(encoding="utf-8").splitlines()
             self.assertEqual(
                 set(lines[:2]),
@@ -326,6 +330,8 @@ class ScriptsTest(unittest.TestCase):
             )
 
             self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Starting parallel Filter.init fetch for armor and weapons...", result.stdout)
+            self.assertIn("Failed to refresh Filter.init data.", result.stderr)
             lines = log_file.read_text(encoding="utf-8").splitlines()
             self.assertIn("fetch https://www.wowhead.com/items/armor armor", lines)
             self.assertIn("fetch https://www.wowhead.com/items/weapons weapons", lines)

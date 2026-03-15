@@ -10,6 +10,8 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 FETCH_FILTER_INIT_BIN="${FETCH_FILTER_INIT_BIN:-./bin/fetch_filter_init.sh}"
 GENERATE_MAPPINGS_BIN="${GENERATE_MAPPINGS_BIN:-./bin/generate_mappings.sh}"
 
+echo "Starting parallel Filter.init fetch for armor and weapons..."
+
 "$FETCH_FILTER_INIT_BIN" "https://www.wowhead.com/items/armor" armor &
 armor_pid=$!
 
@@ -27,5 +29,10 @@ if [ "$armor_status" -ne 0 ] || [ "$weapons_status" -ne 0 ]; then
   exit 1
 fi
 
+echo "Generating normalized mappings..."
 "$PYTHON_BIN" -m scripts.generate_normalized_mappings
+
+echo "Generating crawler mappings module..."
 "$GENERATE_MAPPINGS_BIN"
+
+echo "Mappings update completed successfully."
