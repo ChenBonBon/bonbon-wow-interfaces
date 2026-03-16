@@ -10,6 +10,7 @@ from core.fetcher import (
     fetch_manifest_results,
     parse_items_from_html,
     retry_failed_manifest_results,
+    _sleep_before_fetch,
 )
 
 
@@ -183,7 +184,11 @@ class FetcherTest(unittest.TestCase):
                     current_calls -= 1
                 return SAMPLE_HTML
 
-            fetch_manifest_results(manifest_path, fetch_url=fetch_with_probe)
+            fetch_manifest_results(
+                manifest_path,
+                fetch_url=fetch_with_probe,
+                sleep_before_fetch=lambda: None,
+            )
 
             self.assertEqual(peak_calls, 3)
 
@@ -290,6 +295,21 @@ class FetcherTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
             self.assertFalse((temp_path / "failed-task.json").exists())
+
+    def test_sleep_before_fetch_uses_random_delay_between_one_point_five_and_three_seconds(self):
+        sleep_calls = []
+
+        def fake_uniform(start, end):
+            self.assertEqual(start, 1.5)
+            self.assertEqual(end, 3.0)
+            return 2.25
+
+        def fake_sleep(seconds):
+            sleep_calls.append(seconds)
+
+        _sleep_before_fetch(rand_uniform=fake_uniform, sleep=fake_sleep)
+
+        self.assertEqual(sleep_calls, [2.25])
 
 
 if __name__ == "__main__":

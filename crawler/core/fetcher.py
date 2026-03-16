@@ -1,5 +1,7 @@
 import json
+import random
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.request import urlopen
@@ -7,6 +9,8 @@ from urllib.request import urlopen
 
 LISTVIEW_ITEMS_PATTERN = re.compile(r"var\s+listviewitems\s*=\s*(\[[\s\S]*?\]);")
 FETCH_CONCURRENCY = 3
+FETCH_DELAY_MIN_SECONDS = 1.5
+FETCH_DELAY_MAX_SECONDS = 3.0
 
 
 def extract_listviewitems_json(html_text):
@@ -29,27 +33,38 @@ def parse_items_from_html(html_text):
     ]
 
 
-def fetch_manifest_results(manifest_path, fetch_url=None):
+def fetch_manifest_results(manifest_path, fetch_url=None, sleep_before_fetch=None):
     """根据 manifest 抓取任务结果并回写状态。"""
-    _process_manifest_results(manifest_path, allowed_statuses={"planned"}, fetch_url=fetch_url)
+    _process_manifest_results(
+        manifest_path,
+        allowed_statuses={"planned"},
+        fetch_url=fetch_url,
+        sleep_before_fetch=sleep_before_fetch,
+    )
 
 
-def retry_failed_manifest_results(manifest_path, fetch_url=None):
+def retry_failed_manifest_results(manifest_path, fetch_url=None, sleep_before_fetch=None):
     """重跑 manifest 中失败的任务并回写状态。"""
-    _process_manifest_results(manifest_path, allowed_statuses={"failed"}, fetch_url=fetch_url)
+    _process_manifest_results(
+        manifest_path,
+        allowed_statuses={"failed"},
+        fetch_url=fetch_url,
+        sleep_before_fetch=sleep_before_fetch,
+    )
 
 
-def _process_manifest_results(manifest_path, allowed_statuses, fetch_url=None):
+def _process_manifest_results(manifest_path, allowed_statuses, fetch_url=None, sleep_before_fetch=None):
     """根据允许状态集合处理 manifest 中的任务。"""
     manifest_file = Path(manifest_path)
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     fetch_url = fetch_url or _fetch_url
+    sleep_before_fetch = sleep_before_fetch or _sleep_before_fetch
     output_dir = manifest_file.parent
     eligible_tasks = [task for task in manifest["tasks"] if task.get("status") in allowed_statuses]
 
     with ThreadPoolExecutor(max_workers=FETCH_CONCURRENCY) as executor:
         future_to_task = {
-            executor.submit(_fetch_task_result, task, output_dir, fetch_url): task
+            executor.submit(_fetch_task_result, task, output_dir, fetch_url, sleep_before_fetch): task
             for task in eligible_tasks
         }
 
@@ -73,8 +88,9 @@ def _fetch_url(url):
         return response.read().decode("utf-8")
 
 
-def _fetch_task_result(task, output_dir, fetch_url):
+def _fetch_task_result(task, output_dir, fetch_url, sleep_before_fetch):
     """抓取单个任务并写入结果文件。"""
+    sleep_before_fetch()
     html_text = fetch_url(task["url"])
     items = parse_items_from_html(html_text)
     result_path = output_dir / f"{task['task_id']}.json"
@@ -90,3 +106,11 @@ def _fetch_task_result(task, output_dir, fetch_url):
         ),
         encoding="utf-8",
     )
+
+
+def _sleep_before_fetch(rand_uniform=None, sleep=None):
+    """在请求前增加随机短暂停顿，降低持续高频请求特征。"""
+    rand_uniform = rand_uniform or random.uniform
+    sleep = sleep or time.sleep
+    delay_seconds = rand_uniform(FETCH_DELAY_MIN_SECONDS, FETCH_DELAY_MAX_SECONDS)
+    sleep(delay_seconds)
