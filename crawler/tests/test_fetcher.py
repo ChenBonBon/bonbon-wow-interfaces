@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -132,6 +134,58 @@ class FetcherTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
             self.assertFalse((temp_path / "rare-main-hand-dagger.json").exists())
+
+    def test_fetch_manifest_results_uses_fixed_concurrency_of_three(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            tasks = []
+            for index in range(6):
+                tasks.append(
+                    {
+                        "task_id": f"task-{index}",
+                        "status": "planned",
+                        "url": f"https://example.com/items/{index}",
+                        "category": "weapon",
+                        "slot": "main_hand_21",
+                        "type": "daggers_15",
+                        "quality": "rare_3",
+                        "query_filters": {},
+                    }
+                )
+
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-16T10-00-00",
+                        "generated_at": "2026-03-16T10:00:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": len(tasks),
+                        "tasks": tasks,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            lock = threading.Lock()
+            current_calls = 0
+            peak_calls = 0
+
+            def fetch_with_probe(_url):
+                nonlocal current_calls, peak_calls
+                with lock:
+                    current_calls += 1
+                    peak_calls = max(peak_calls, current_calls)
+                time.sleep(0.05)
+                with lock:
+                    current_calls -= 1
+                return SAMPLE_HTML
+
+            fetch_manifest_results(manifest_path, fetch_url=fetch_with_probe)
+
+            self.assertEqual(peak_calls, 3)
 
     def test_retry_failed_manifest_results_only_retries_failed_tasks(self):
         with TemporaryDirectory() as temp_dir:
