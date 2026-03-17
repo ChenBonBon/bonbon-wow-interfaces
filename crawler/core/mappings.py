@@ -2,11 +2,11 @@ from copy import deepcopy
 
 from core.mappings_data import (
     CATEGORIES,
+    CATEGORY_SLOTS,
     CATEGORY_TYPES,
     QUALITIES,
     QUERY_FILTERS,
     QUERY_FILTER_ORDER,
-    SLOTS,
 )
 
 
@@ -23,6 +23,18 @@ def get_category_type_meta(category, type_name):
         raise ValueError(f"未知 type: {category}.{type_name}")
 
     return deepcopy(type_meta)
+
+
+def get_category_slot_meta(category, slot_name):
+    category_meta = CATEGORY_SLOTS.get(category)
+    if category_meta is None:
+        raise ValueError(f"未知 category: {category}")
+
+    slot_meta = category_meta.get(slot_name)
+    if slot_meta is None:
+        raise ValueError(f"未知 slot: {category}.{slot_name}")
+
+    return deepcopy(slot_meta)
 
 
 def normalize_task(task):
@@ -52,8 +64,7 @@ def validate_task(task):
     if normalized["category"] not in CATEGORIES:
         raise ValueError(f"未知 category: {normalized['category']}")
 
-    if normalized["slot"] not in SLOTS:
-        raise ValueError(f"未知 slot: {normalized['slot']}")
+    get_category_slot_meta(normalized["category"], normalized["slot"])
 
     get_category_type_meta(normalized["category"], normalized["type"])
 
@@ -79,7 +90,7 @@ def describe_task(task):
     return " ".join(
         (
             QUALITIES[normalized["quality"]]["label"],
-            SLOTS[normalized["slot"]]["label"],
+            CATEGORY_SLOTS[normalized["category"]][normalized["slot"]]["label"],
             CATEGORY_TYPES[normalized["category"]][normalized["type"]]["label"],
         )
     )

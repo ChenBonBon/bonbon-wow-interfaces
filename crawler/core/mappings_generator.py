@@ -117,13 +117,15 @@ def build_generated_mappings_data(normalized_data):
             "wowhead": {"facet": "quality", "value": item["value"]},
         }
 
-    slots = {}
-    for item in normalized_data["slots"]:
-        key = normalize_label_to_key(item["label"], item["value"])
-        slots[key] = {
-            "label": _display_label(item["label"]),
-            "wowhead": {"facet": "slot", "value": item["value"]},
-        }
+    category_slots = {}
+    for category_key, items in normalized_data["slots"].items():
+        category_slots[category_key] = {}
+        for item in items:
+            key = normalize_label_to_key(item["label"], item["value"])
+            category_slots[category_key][key] = {
+                "label": _display_label(item["label"]),
+                "wowhead": {"facet": "slot", "value": item["value"]},
+            }
 
     category_types = {}
     for category_key, items in normalized_data["types"].items():
@@ -161,7 +163,7 @@ def build_generated_mappings_data(normalized_data):
     return {
         "QUALITIES": qualities,
         "CATEGORIES": CATEGORIES,
-        "SLOTS": slots,
+        "CATEGORY_SLOTS": category_slots,
         "CATEGORY_TYPES": category_types,
         "QUERY_FILTERS": query_filters,
         "QUERY_FILTER_ORDER": query_filter_order,
@@ -190,7 +192,7 @@ def render_mappings_data_module(normalized_data):
         "\n",
         _render_assignment("CATEGORIES", generated["CATEGORIES"]),
         "\n",
-        _render_assignment("SLOTS", generated["SLOTS"]),
+        _render_assignment("CATEGORY_SLOTS", generated["CATEGORY_SLOTS"]),
         "\n",
         _render_assignment("CATEGORY_TYPES", generated["CATEGORY_TYPES"]),
         "\n",

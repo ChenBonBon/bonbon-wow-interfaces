@@ -352,10 +352,10 @@ class ScriptsTest(unittest.TestCase):
                             {"value": 3, "label": "Rare"},
                             {"value": 4, "label": "Epic"},
                         ],
-                        "slots": [
-                            {"value": 1, "label": "Head"},
-                            {"value": 21, "label": "Main Hand"},
-                        ],
+                        "slots": {
+                            "armor": [{"value": 1, "label": "Head"}],
+                            "weapon": [{"value": 21, "label": "Main Hand"}],
+                        },
                         "types": {
                             "armor": [{"value": 1, "label": "Cloth Armor"}],
                             "weapon": [{"value": 15, "label": "Daggers"}],

@@ -21,11 +21,15 @@ NORMALIZED_MAPPINGS = {
         {"value": 3, "label": "Rare"},
         {"value": 4, "label": "Epic"},
     ],
-    "slots": [
-        {"value": 1, "label": "Head"},
-        {"value": 21, "label": "Main Hand"},
-        {"value": 23, "label": "Held In Off-hand"},
-    ],
+    "slots": {
+        "armor": [
+            {"value": 1, "label": "Head"},
+        ],
+        "weapon": [
+            {"value": 21, "label": "Main Hand"},
+            {"value": 23, "label": "Held In Off-hand"},
+        ],
+    },
     "types": {
         "armor": [
             {"value": 1, "label": "Cloth Armor"},
@@ -57,8 +61,11 @@ class MappingsGeneratorTest(unittest.TestCase):
         generated = build_generated_mappings_data(NORMALIZED_MAPPINGS)
 
         self.assertEqual(generated["QUALITIES"]["uncommon"]["wowhead"], {"facet": "quality", "value": 2})
-        self.assertEqual(generated["SLOTS"]["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
-        self.assertEqual(generated["SLOTS"]["held_in_off_hand_23"]["wowhead"], {"facet": "slot", "value": 23})
+        self.assertEqual(generated["CATEGORY_SLOTS"]["weapon"]["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
+        self.assertEqual(
+            generated["CATEGORY_SLOTS"]["weapon"]["held_in_off_hand_23"]["wowhead"],
+            {"facet": "slot", "value": 23},
+        )
         self.assertEqual(generated["CATEGORY_TYPES"]["armor"]["cloth_armor_1"]["wowhead"], {"facet": "type", "value": 1})
         self.assertEqual(generated["CATEGORY_TYPES"]["weapon"]["daggers_15"]["wowhead"], {"facet": "type", "value": 15})
         self.assertEqual(generated["QUERY_FILTERS"]["can_be_worn_equipped"]["wowhead"], {"id": 195})
@@ -67,6 +74,7 @@ class MappingsGeneratorTest(unittest.TestCase):
         module_text = render_mappings_data_module(NORMALIZED_MAPPINGS)
 
         self.assertIn('"uncommon"', module_text)
+        self.assertIn('CATEGORY_SLOTS = {', module_text)
         self.assertIn('"main_hand_21"', module_text)
         self.assertIn('"cloth_armor_1"', module_text)
         self.assertIn('"daggers_15"', module_text)

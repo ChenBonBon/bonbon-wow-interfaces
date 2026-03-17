@@ -4,12 +4,13 @@ from pathlib import Path
 
 from core.mappings import (
     CATEGORIES,
+    CATEGORY_SLOTS,
     QUALITIES,
     QUERY_FILTERS,
-    SLOTS,
+    get_category_slot_meta,
+    get_category_type_meta,
     build_task_slug,
     describe_task,
-    get_category_type_meta,
     normalize_task,
     validate_task,
 )
@@ -81,9 +82,14 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(meta["label"], "匕首")
         self.assertEqual(meta["wowhead"], {"facet": "type", "value": 15})
 
+    def test_get_category_slot_meta_returns_chinese_label(self):
+        meta = get_category_slot_meta("weapon", "main_hand_21")
+        self.assertEqual(meta["label"], "主手")
+        self.assertEqual(meta["wowhead"], {"facet": "slot", "value": 21})
+
     def test_quality_and_slot_expose_wowhead_filter_metadata(self):
         self.assertEqual(QUALITIES["uncommon"]["wowhead"], {"facet": "quality", "value": 2})
-        self.assertEqual(SLOTS["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
+        self.assertEqual(CATEGORY_SLOTS["weapon"]["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
 
     def test_categories_expose_wowhead_paths(self):
         self.assertEqual(CATEGORIES["weapon"]["wowhead"], {"path": "weapons"})
@@ -112,6 +118,13 @@ class MappingsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_task(invalid_task)
 
+    def test_validate_task_rejects_category_slot_mismatch(self):
+        invalid_task = dict(self.weapon_task)
+        invalid_task["slot"] = "head_1"
+
+        with self.assertRaises(ValueError):
+            validate_task(invalid_task)
+
     def test_validate_task_rejects_unknown_query_filter_key(self):
         invalid_task = dict(self.armor_task)
         invalid_task["query_filters"] = {"unknown_filter": "yes"}
@@ -134,25 +147,27 @@ class MappingsTest(unittest.TestCase):
         for task in tasks:
             validate_task(task)
 
-    def test_default_task_file_contains_only_main_hand_daggers(self):
+    def test_default_task_file_contains_main_hand_weapon_batch(self):
         config_path = Path(__file__).resolve().parents[1] / "tasks" / "wowhead_items.json"
         tasks = json.loads(config_path.read_text(encoding="utf-8"))
 
-        self.assertEqual(len(tasks), 3)
-        self.assertEqual(
-            [task["task_id"] for task in tasks],
-            [
-                "weapon-uncommon-main_hand_21-daggers_15",
-                "weapon-rare-main_hand_21-daggers_15",
-                "weapon-epic-main_hand_21-daggers_15",
-            ],
-        )
+        self.assertEqual(len(tasks), 15)
 
         for task in tasks:
             validate_task(task)
             self.assertEqual(task["category"], "weapon")
             self.assertEqual(task["slot"], "main_hand_21")
-            self.assertEqual(task["type"], "daggers_15")
+            self.assertIn(
+                task["type"],
+                {
+                    "daggers_15",
+                    "fist_weapons_13",
+                    "one_handed_axes_0",
+                    "one_handed_maces_4",
+                    "one_handed_swords_7",
+                },
+            )
+            self.assertIn(task["quality"], {"uncommon", "rare", "epic"})
             self.assertEqual(
                 task["query_filters"],
                 {

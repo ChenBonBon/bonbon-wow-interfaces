@@ -1,10 +1,10 @@
 from core.mappings import (
     CATEGORIES,
+    CATEGORY_SLOTS,
     CATEGORY_TYPES,
     QUALITIES,
     QUERY_FILTERS,
     QUERY_FILTER_ORDER,
-    SLOTS,
     normalize_task,
     validate_task,
 )
@@ -27,7 +27,7 @@ def build_task_url_parts(task):
     filter_path = "/".join(
         (
             _build_filter_segment(QUALITIES[quality_key]["wowhead"]),
-            _build_filter_segment(SLOTS[slot_key]["wowhead"]),
+            _build_filter_segment(CATEGORY_SLOTS[category_key][slot_key]["wowhead"]),
             _build_filter_segment(CATEGORY_TYPES[category_key][type_key]["wowhead"]),
         )
     )

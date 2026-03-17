@@ -110,10 +110,16 @@ def build_normalized_mappings(armor_html, armor_filters, weapons_html, weapons_f
             "weapon": {"path": "weapons"},
         },
         "qualities": qualities,
-        "slots": _dedupe_options(
-            extract_select_options(armor_html, "filter-facet-slot"),
-            extract_select_options(weapons_html, "filter-facet-slot"),
-        ),
+        "slots": {
+            "armor": sorted(
+                extract_select_options(armor_html, "filter-facet-slot"),
+                key=lambda item: item["value"],
+            ),
+            "weapon": sorted(
+                extract_select_options(weapons_html, "filter-facet-slot"),
+                key=lambda item: item["value"],
+            ),
+        },
         "types": {
             "armor": sorted(
                 extract_select_options(armor_html, "filter-facet-type"),

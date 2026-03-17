@@ -37,159 +37,163 @@ CATEGORIES = {
     }
 }
 
-SLOTS = {
-    "head_1": {
-        "label": "头部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 1
+CATEGORY_SLOTS = {
+    "armor": {
+        "head_1": {
+            "label": "头部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 1
+            }
+        },
+        "neck_2": {
+            "label": "项链",
+            "wowhead": {
+                "facet": "slot",
+                "value": 2
+            }
+        },
+        "shoulder_3": {
+            "label": "肩部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 3
+            }
+        },
+        "shirt_4": {
+            "label": "衬衣",
+            "wowhead": {
+                "facet": "slot",
+                "value": 4
+            }
+        },
+        "chest_5": {
+            "label": "胸部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 5
+            }
+        },
+        "waist_6": {
+            "label": "腰部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 6
+            }
+        },
+        "legs_7": {
+            "label": "腿部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 7
+            }
+        },
+        "feet_8": {
+            "label": "脚部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 8
+            }
+        },
+        "wrist_9": {
+            "label": "手腕",
+            "wowhead": {
+                "facet": "slot",
+                "value": 9
+            }
+        },
+        "hands_10": {
+            "label": "手部",
+            "wowhead": {
+                "facet": "slot",
+                "value": 10
+            }
+        },
+        "finger_11": {
+            "label": "戒指",
+            "wowhead": {
+                "facet": "slot",
+                "value": 11
+            }
+        },
+        "trinket_12": {
+            "label": "饰品",
+            "wowhead": {
+                "facet": "slot",
+                "value": 12
+            }
+        },
+        "shield_14": {
+            "label": "盾牌",
+            "wowhead": {
+                "facet": "slot",
+                "value": 14
+            }
+        },
+        "back_16": {
+            "label": "披风",
+            "wowhead": {
+                "facet": "slot",
+                "value": 16
+            }
+        },
+        "tabard_19": {
+            "label": "战袍",
+            "wowhead": {
+                "facet": "slot",
+                "value": 19
+            }
+        },
+        "held_in_off_hand_23": {
+            "label": "持于副手",
+            "wowhead": {
+                "facet": "slot",
+                "value": 23
+            }
         }
     },
-    "neck_2": {
-        "label": "项链",
-        "wowhead": {
-            "facet": "slot",
-            "value": 2
-        }
-    },
-    "shoulder_3": {
-        "label": "肩部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 3
-        }
-    },
-    "shirt_4": {
-        "label": "衬衣",
-        "wowhead": {
-            "facet": "slot",
-            "value": 4
-        }
-    },
-    "chest_5": {
-        "label": "胸部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 5
-        }
-    },
-    "waist_6": {
-        "label": "腰部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 6
-        }
-    },
-    "legs_7": {
-        "label": "腿部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 7
-        }
-    },
-    "feet_8": {
-        "label": "脚部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 8
-        }
-    },
-    "wrist_9": {
-        "label": "手腕",
-        "wowhead": {
-            "facet": "slot",
-            "value": 9
-        }
-    },
-    "hands_10": {
-        "label": "手部",
-        "wowhead": {
-            "facet": "slot",
-            "value": 10
-        }
-    },
-    "finger_11": {
-        "label": "戒指",
-        "wowhead": {
-            "facet": "slot",
-            "value": 11
-        }
-    },
-    "trinket_12": {
-        "label": "饰品",
-        "wowhead": {
-            "facet": "slot",
-            "value": 12
-        }
-    },
-    "one_hand_13": {
-        "label": "单手",
-        "wowhead": {
-            "facet": "slot",
-            "value": 13
-        }
-    },
-    "shield_14": {
-        "label": "盾牌",
-        "wowhead": {
-            "facet": "slot",
-            "value": 14
-        }
-    },
-    "ranged_15": {
-        "label": "远程",
-        "wowhead": {
-            "facet": "slot",
-            "value": 15
-        }
-    },
-    "back_16": {
-        "label": "披风",
-        "wowhead": {
-            "facet": "slot",
-            "value": 16
-        }
-    },
-    "two_hand_17": {
-        "label": "双手",
-        "wowhead": {
-            "facet": "slot",
-            "value": 17
-        }
-    },
-    "tabard_19": {
-        "label": "战袍",
-        "wowhead": {
-            "facet": "slot",
-            "value": 19
-        }
-    },
-    "main_hand_21": {
-        "label": "主手",
-        "wowhead": {
-            "facet": "slot",
-            "value": 21
-        }
-    },
-    "off_hand_22": {
-        "label": "副手",
-        "wowhead": {
-            "facet": "slot",
-            "value": 22
-        }
-    },
-    "held_in_off_hand_23": {
-        "label": "持于副手",
-        "wowhead": {
-            "facet": "slot",
-            "value": 23
-        }
-    },
-    "ranged_26": {
-        "label": "远程",
-        "wowhead": {
-            "facet": "slot",
-            "value": 26
+    "weapon": {
+        "one_hand_13": {
+            "label": "单手",
+            "wowhead": {
+                "facet": "slot",
+                "value": 13
+            }
+        },
+        "ranged_15": {
+            "label": "远程",
+            "wowhead": {
+                "facet": "slot",
+                "value": 15
+            }
+        },
+        "two_hand_17": {
+            "label": "双手",
+            "wowhead": {
+                "facet": "slot",
+                "value": 17
+            }
+        },
+        "main_hand_21": {
+            "label": "主手",
+            "wowhead": {
+                "facet": "slot",
+                "value": 21
+            }
+        },
+        "off_hand_22": {
+            "label": "副手",
+            "wowhead": {
+                "facet": "slot",
+                "value": 22
+            }
+        },
+        "ranged_26": {
+            "label": "远程",
+            "wowhead": {
+                "facet": "slot",
+                "value": 26
+            }
         }
     }
 }

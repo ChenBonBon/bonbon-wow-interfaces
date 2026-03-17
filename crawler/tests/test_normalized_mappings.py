@@ -116,12 +116,16 @@ class NormalizedMappingsTest(unittest.TestCase):
                     {"value": 3, "label": "Rare"},
                     {"value": 4, "label": "Epic"},
                 ],
-                "slots": [
-                    {"value": 1, "label": "Head"},
-                    {"value": 16, "label": "Back"},
-                    {"value": 17, "label": "Two-Hand"},
-                    {"value": 21, "label": "Main Hand"},
-                ],
+                "slots": {
+                    "armor": [
+                        {"value": 1, "label": "Head"},
+                        {"value": 16, "label": "Back"},
+                    ],
+                    "weapon": [
+                        {"value": 17, "label": "Two-Hand"},
+                        {"value": 21, "label": "Main Hand"},
+                    ],
+                },
                 "types": {
                     "armor": [
                         {"value": 1, "label": "Cloth Armor"},
