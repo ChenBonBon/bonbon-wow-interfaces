@@ -53,25 +53,26 @@ class MappingsGeneratorTest(unittest.TestCase):
         self.assertEqual(normalize_label_to_key("Can be worn/equipped", 195), "can_be_worn_equipped_195")
         self.assertEqual(normalize_label_to_key("Held In Off-hand", 23), "held_in_off_hand_23")
 
-    def test_build_generated_mappings_data_uses_generated_keys(self):
+    def test_build_generated_mappings_data_uses_semantic_quality_and_filter_keys(self):
         generated = build_generated_mappings_data(NORMALIZED_MAPPINGS)
 
-        self.assertEqual(generated["QUALITIES"]["uncommon_2"]["wowhead"], {"facet": "quality", "value": 2})
+        self.assertEqual(generated["QUALITIES"]["uncommon"]["wowhead"], {"facet": "quality", "value": 2})
         self.assertEqual(generated["SLOTS"]["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
         self.assertEqual(generated["SLOTS"]["held_in_off_hand_23"]["wowhead"], {"facet": "slot", "value": 23})
         self.assertEqual(generated["CATEGORY_TYPES"]["armor"]["cloth_armor_1"]["wowhead"], {"facet": "type", "value": 1})
         self.assertEqual(generated["CATEGORY_TYPES"]["weapon"]["daggers_15"]["wowhead"], {"facet": "type", "value": 15})
-        self.assertEqual(generated["QUERY_FILTERS"]["can_be_worn_equipped_195"]["wowhead"], {"id": 195})
+        self.assertEqual(generated["QUERY_FILTERS"]["can_be_worn_equipped"]["wowhead"], {"id": 195})
 
     def test_render_mappings_data_module_contains_generated_keys_and_values(self):
         module_text = render_mappings_data_module(NORMALIZED_MAPPINGS)
 
+        self.assertIn('"uncommon"', module_text)
         self.assertIn('"main_hand_21"', module_text)
         self.assertIn('"cloth_armor_1"', module_text)
         self.assertIn('"daggers_15"', module_text)
-        self.assertIn('"can_be_worn_equipped_195"', module_text)
-        self.assertIn('"available_to_players_161"', module_text)
-        self.assertIn('QUERY_FILTER_ORDER = ("available_to_players_161", "can_be_worn_equipped_195", "disenchantable_8")', module_text)
+        self.assertIn('"can_be_worn_equipped"', module_text)
+        self.assertIn('"available_to_players"', module_text)
+        self.assertIn('QUERY_FILTER_ORDER = ("available_to_players", "can_be_worn_equipped", "disenchantable")', module_text)
         self.assertNotIn("def normalize_task", module_text)
         self.assertNotIn("def validate_task", module_text)
 

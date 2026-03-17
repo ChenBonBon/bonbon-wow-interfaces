@@ -378,7 +378,7 @@ class ScriptsTest(unittest.TestCase):
             module_text = output_path.read_text(encoding="utf-8")
             self.assertIn('"main_hand_21"', module_text)
             self.assertIn('"daggers_15"', module_text)
-            self.assertIn('"can_be_worn_equipped_195"', module_text)
+            self.assertIn('"can_be_worn_equipped"', module_text)
             self.assertNotIn("def normalize_task", module_text)
 
     def test_generate_normalized_mappings_reads_local_files_and_writes_output(self):
@@ -440,7 +440,7 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "uncommon-head-cloth",
                             "enabled": True,
-                            "quality": "uncommon_2",
+                            "quality": "uncommon",
                             "category": "armor",
                             "slot": "head_1",
                             "type": "cloth_armor_1",
@@ -479,7 +479,7 @@ class ScriptsTest(unittest.TestCase):
                                 "category": "armor",
                                 "slot": "head_1",
                                 "type": "cloth_armor_1",
-                                "quality": "uncommon_2",
+                                "quality": "uncommon",
                                 "query_filters": {},
                             }
                         ],
@@ -671,7 +671,7 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "uncommon-head-cloth",
                             "enabled": True,
-                            "quality": "uncommon_2",
+                            "quality": "uncommon",
                             "category": "armor",
                             "slot": "head_1",
                             "type": "cloth_armor_1",
@@ -707,7 +707,7 @@ class ScriptsTest(unittest.TestCase):
                         {
                             "task_id": "will-fail",
                             "enabled": True,
-                            "quality": "uncommon_2",
+                            "quality": "uncommon",
                             "category": "armor",
                             "slot": "head_1",
                             "type": "cloth_armor_1",

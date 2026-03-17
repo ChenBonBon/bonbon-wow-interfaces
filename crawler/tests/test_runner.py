@@ -13,19 +13,19 @@ class RunnerTest(unittest.TestCase):
         self.enabled_task = {
             "task_id": "uncommon-head-cloth",
             "enabled": True,
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "yes",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "yes",
+                "can_be_worn_equipped": "yes",
             },
         }
         self.disabled_task = {
-            "task_id": "rare-main-hand-dagger",
+            "task_id": "weapon-rare-main_hand_21-daggers_15",
             "enabled": False,
-            "quality": "rare_3",
+            "quality": "rare",
             "category": "weapon",
             "slot": "main_hand_21",
             "type": "daggers_15",

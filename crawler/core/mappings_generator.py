@@ -94,6 +94,16 @@ def normalize_label_to_key(label, value):
     return f"{text.strip('_')}_{value}"
 
 
+def normalize_label_to_semantic_key(label):
+    text = label.strip().lower()
+    text = re.sub(r"[()]+", " ", text)
+    text = re.sub(r"[/,]", " ", text)
+    text = text.replace("-", " ")
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"_+", "_", text)
+    return text.strip("_")
+
+
 def _display_label(label, fallback=None):
     return DISPLAY_LABEL_TRANSLATIONS.get(label, fallback or label)
 
@@ -101,7 +111,7 @@ def _display_label(label, fallback=None):
 def build_generated_mappings_data(normalized_data):
     qualities = {}
     for item in normalized_data["qualities"]:
-        key = normalize_label_to_key(item["label"], item["value"])
+        key = normalize_label_to_semantic_key(item["label"])
         qualities[key] = {
             "label": QUALITY_LABEL_TRANSLATIONS.get(item["label"], item["label"]),
             "wowhead": {"facet": "quality", "value": item["value"]},
@@ -127,7 +137,7 @@ def build_generated_mappings_data(normalized_data):
 
     query_filters = {}
     for item in normalized_data["query_filters"]:
-        key = normalize_label_to_key(item["label"], item["id"])
+        key = normalize_label_to_semantic_key(item["label"])
         query_filters[key] = {
             "label": _display_label(item["label"]),
             "wowhead": {"id": item["id"]},
@@ -139,13 +149,13 @@ def build_generated_mappings_data(normalized_data):
         }
 
     query_filter_order = tuple(
-        normalize_label_to_key(label, value)
+        normalize_label_to_semantic_key(label)
         for label, value in DEFAULT_QUERY_FILTER_ORDER
-        if normalize_label_to_key(label, value) in query_filters
+        if normalize_label_to_semantic_key(label) in query_filters
     ) + tuple(
         key
         for key in sorted(query_filters)
-        if key not in {normalize_label_to_key(label, value) for label, value in DEFAULT_QUERY_FILTER_ORDER}
+        if key not in {normalize_label_to_semantic_key(label) for label, value in DEFAULT_QUERY_FILTER_ORDER}
     )
 
     return {

@@ -19,42 +19,42 @@ class MappingsTest(unittest.TestCase):
     def setUp(self):
         self.armor_task = {
             "task_id": "uncommon-head-cloth",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
         }
         self.weapon_task = {
-            "task_id": "rare-main-hand-dagger",
-            "quality": "rare_3",
+            "task_id": "weapon-rare-main_hand_21-daggers_15",
+            "quality": "rare",
             "category": "weapon",
             "slot": "main_hand_21",
             "type": "daggers_15",
         }
         self.query_filter_task = {
             "task_id": "uncommon-head-cloth-filtered",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "yes",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "yes",
+                "can_be_worn_equipped": "yes",
             },
         }
         self.disenchantable_filter_task = {
             "task_id": "uncommon-head-cloth-disenchantable-no",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "disenchantable_8": "no",
+                "disenchantable": "no",
             },
         }
 
     def test_build_task_slug_uses_semantic_values(self):
-        self.assertEqual(build_task_slug(self.armor_task), "uncommon_2-head_1-cloth_armor_1")
+        self.assertEqual(build_task_slug(self.armor_task), "uncommon-head_1-cloth_armor_1")
 
     def test_describe_task_uses_chinese_labels(self):
         self.assertEqual(describe_task(self.armor_task), "绿色 头部 布甲")
@@ -71,8 +71,8 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(
             normalized["query_filters"],
             {
-                "available_to_players_161": "yes",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "yes",
+                "can_be_worn_equipped": "yes",
             },
         )
 
@@ -82,7 +82,7 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(meta["wowhead"], {"facet": "type", "value": 15})
 
     def test_quality_and_slot_expose_wowhead_filter_metadata(self):
-        self.assertEqual(QUALITIES["uncommon_2"]["wowhead"], {"facet": "quality", "value": 2})
+        self.assertEqual(QUALITIES["uncommon"]["wowhead"], {"facet": "quality", "value": 2})
         self.assertEqual(SLOTS["main_hand_21"]["wowhead"], {"facet": "slot", "value": 21})
 
     def test_categories_expose_wowhead_paths(self):
@@ -90,11 +90,11 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(CATEGORIES["armor"]["wowhead"], {"path": "armor"})
 
     def test_query_filters_expose_wowhead_ids_and_values(self):
-        self.assertEqual(QUERY_FILTERS["available_to_players_161"]["wowhead"], {"id": 161})
-        self.assertEqual(QUERY_FILTERS["can_be_worn_equipped_195"]["wowhead"], {"id": 195})
-        self.assertEqual(QUERY_FILTERS["disenchantable_8"]["wowhead"], {"id": 8})
+        self.assertEqual(QUERY_FILTERS["available_to_players"]["wowhead"], {"id": 161})
+        self.assertEqual(QUERY_FILTERS["can_be_worn_equipped"]["wowhead"], {"id": 195})
+        self.assertEqual(QUERY_FILTERS["disenchantable"]["wowhead"], {"id": 8})
         self.assertEqual(
-            QUERY_FILTERS["available_to_players_161"]["values"],
+            QUERY_FILTERS["available_to_players"]["values"],
             {
                 "yes": 1,
                 "no": 2,
@@ -121,7 +121,7 @@ class MappingsTest(unittest.TestCase):
 
     def test_validate_task_rejects_invalid_query_filter_value(self):
         invalid_task = dict(self.armor_task)
-        invalid_task["query_filters"] = {"available_to_players_161": "maybe"}
+        invalid_task["query_filters"] = {"available_to_players": "maybe"}
 
         with self.assertRaises(ValueError):
             validate_task(invalid_task)
@@ -142,9 +142,9 @@ class MappingsTest(unittest.TestCase):
         self.assertEqual(
             [task["task_id"] for task in tasks],
             [
-                "uncommon-main-hand-dagger",
-                "rare-main-hand-dagger",
-                "epic-main-hand-dagger",
+                "weapon-uncommon-main_hand_21-daggers_15",
+                "weapon-rare-main_hand_21-daggers_15",
+                "weapon-epic-main_hand_21-daggers_15",
             ],
         )
 
@@ -156,9 +156,9 @@ class MappingsTest(unittest.TestCase):
             self.assertEqual(
                 task["query_filters"],
                 {
-                    "available_to_players_161": "yes",
-                    "can_be_worn_equipped_195": "yes",
-                    "disenchantable_8": "no",
+                    "available_to_players": "yes",
+                    "can_be_worn_equipped": "yes",
+                    "disenchantable": "no",
                 },
             )
 

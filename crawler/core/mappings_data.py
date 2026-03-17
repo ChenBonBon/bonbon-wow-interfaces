@@ -1,19 +1,19 @@
 QUALITIES = {
-    "uncommon_2": {
+    "uncommon": {
         "label": "绿色",
         "wowhead": {
             "facet": "quality",
             "value": 2
         }
     },
-    "rare_3": {
+    "rare": {
         "label": "蓝色",
         "wowhead": {
             "facet": "quality",
             "value": 3
         }
     },
-    "epic_4": {
+    "epic": {
         "label": "紫色",
         "wowhead": {
             "facet": "quality",
@@ -461,7 +461,7 @@ CATEGORY_TYPES = {
 }
 
 QUERY_FILTERS = {
-    "disenchantable_8": {
+    "disenchantable": {
         "label": "可分解",
         "wowhead": {
             "id": 8
@@ -472,7 +472,7 @@ QUERY_FILTERS = {
             "any": None
         }
     },
-    "available_to_players_161": {
+    "available_to_players": {
         "label": "玩家可用",
         "wowhead": {
             "id": 161
@@ -483,7 +483,7 @@ QUERY_FILTERS = {
             "any": None
         }
     },
-    "can_be_worn_equipped_195": {
+    "can_be_worn_equipped": {
         "label": "可穿戴/可装备",
         "wowhead": {
             "id": 195
@@ -496,4 +496,4 @@ QUERY_FILTERS = {
     }
 }
 
-QUERY_FILTER_ORDER = ("available_to_players_161", "can_be_worn_equipped_195", "disenchantable_8")
+QUERY_FILTER_ORDER = ("available_to_players", "can_be_worn_equipped", "disenchantable")

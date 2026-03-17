@@ -248,28 +248,32 @@ python3 -m scripts.generate_mappings
 cp tasks/wowhead_items.example.json tasks/wowhead_items.json
 ```
 
-当前 key 规则以 Wowhead label/value 为准，统一使用 `label_value` 形式。  
+当前 key 规则分两层：
+
+- `quality` 和 `query_filter` 使用语义 key
+- `slot` 和 `type` 使用 `label_value` 形式
+
 例如：
 
-- `quality`: `uncommon_2`
+- `quality`: `uncommon`
 - `slot`: `main_hand_21`
 - `type`: `daggers_15`
-- `query_filter`: `can_be_worn_equipped_195`
+- `query_filter`: `can_be_worn_equipped`
 
 一个任务的示例：
 
 ```json
 {
-  "task_id": "rare-main-hand-dagger",
+  "task_id": "weapon-rare-main_hand_21-daggers_15",
   "enabled": true,
-  "quality": "rare_3",
+  "quality": "rare",
   "category": "weapon",
   "slot": "main_hand_21",
   "type": "daggers_15",
   "query_filters": {
-    "available_to_players_161": "yes",
-    "can_be_worn_equipped_195": "yes",
-    "disenchantable_8": "no"
+    "available_to_players": "yes",
+    "can_be_worn_equipped": "yes",
+    "disenchantable": "no"
   }
 }
 ```

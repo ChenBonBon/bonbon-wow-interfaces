@@ -63,8 +63,8 @@ class FetcherTest(unittest.TestCase):
                                 "category": "armor",
                                 "slot": "head_1",
                                 "type": "cloth_armor_1",
-                                "quality": "uncommon_2",
-                                "query_filters": {"available_to_players_161": "yes"},
+                                "quality": "uncommon",
+                                "query_filters": {"available_to_players": "yes"},
                             }
                         ],
                     },
@@ -107,13 +107,13 @@ class FetcherTest(unittest.TestCase):
                         "task_count": 1,
                         "tasks": [
                             {
-                                "task_id": "rare-main-hand-dagger",
+                                "task_id": "weapon-rare-main_hand_21-daggers_15",
                                 "status": "planned",
                                 "url": "https://example.com/items/2",
                                 "category": "weapon",
                                 "slot": "main_hand_21",
                                 "type": "daggers_15",
-                                "quality": "rare_3",
+                                "quality": "rare",
                                 "query_filters": {},
                             }
                         ],
@@ -134,7 +134,7 @@ class FetcherTest(unittest.TestCase):
 
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
-            self.assertFalse((temp_path / "rare-main-hand-dagger.json").exists())
+            self.assertFalse((temp_path / "weapon-rare-main_hand_21-daggers_15.json").exists())
 
     def test_fetch_manifest_results_uses_fixed_concurrency_of_three(self):
         with TemporaryDirectory() as temp_dir:
@@ -150,7 +150,7 @@ class FetcherTest(unittest.TestCase):
                         "category": "weapon",
                         "slot": "main_hand_21",
                         "type": "daggers_15",
-                        "quality": "rare_3",
+                        "quality": "rare",
                         "query_filters": {},
                     }
                 )
@@ -211,7 +211,7 @@ class FetcherTest(unittest.TestCase):
                                 "category": "armor",
                                 "slot": "head_1",
                                 "type": "cloth_armor_1",
-                                "quality": "uncommon_2",
+                                "quality": "uncommon",
                                 "query_filters": {},
                             },
                             {
@@ -221,7 +221,7 @@ class FetcherTest(unittest.TestCase):
                                 "category": "armor",
                                 "slot": "head_1",
                                 "type": "cloth_armor_1",
-                                "quality": "uncommon_2",
+                                "quality": "uncommon",
                                 "query_filters": {},
                             },
                             {
@@ -231,7 +231,7 @@ class FetcherTest(unittest.TestCase):
                                 "category": "armor",
                                 "slot": "head_1",
                                 "type": "cloth_armor_1",
-                                "quality": "uncommon_2",
+                                "quality": "uncommon",
                                 "query_filters": {},
                             },
                         ],
@@ -273,7 +273,7 @@ class FetcherTest(unittest.TestCase):
                                 "category": "weapon",
                                 "slot": "main_hand_21",
                                 "type": "daggers_15",
-                                "quality": "rare_3",
+                                "quality": "rare",
                                 "query_filters": {},
                             }
                         ],

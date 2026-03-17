@@ -7,70 +7,70 @@ class UrlBuilderTest(unittest.TestCase):
     def setUp(self):
         self.armor_task = {
             "task_id": "uncommon-head-cloth",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
         }
         self.weapon_task = {
-            "task_id": "rare-main-hand-dagger",
-            "quality": "rare_3",
+            "task_id": "weapon-rare-main_hand_21-daggers_15",
+            "quality": "rare",
             "category": "weapon",
             "slot": "main_hand_21",
             "type": "daggers_15",
         }
         self.query_filter_task = {
             "task_id": "uncommon-head-cloth-filtered",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "yes",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "yes",
+                "can_be_worn_equipped": "yes",
             },
         }
         self.single_query_filter_task = {
             "task_id": "uncommon-head-cloth-player",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "yes",
+                "available_to_players": "yes",
             },
         }
         self.any_query_filter_task = {
             "task_id": "uncommon-head-cloth-any",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "any",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "any",
+                "can_be_worn_equipped": "yes",
             },
         }
         self.disenchantable_query_filter_task = {
             "task_id": "uncommon-head-cloth-disenchantable-no",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "disenchantable_8": "no",
+                "disenchantable": "no",
             },
         }
         self.combined_query_filter_task = {
             "task_id": "uncommon-head-cloth-combined",
-            "quality": "uncommon_2",
+            "quality": "uncommon",
             "category": "armor",
             "slot": "head_1",
             "type": "cloth_armor_1",
             "query_filters": {
-                "available_to_players_161": "yes",
-                "disenchantable_8": "no",
-                "can_be_worn_equipped_195": "yes",
+                "available_to_players": "yes",
+                "disenchantable": "no",
+                "can_be_worn_equipped": "yes",
             },
         }
 
