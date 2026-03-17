@@ -51,9 +51,17 @@ cd /Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler
 
 ### 2. 运行完整抓取流程
 
-默认读取：
+运行前，请先从模板复制并创建任务文件：
+
+```bash
+cp tasks/wowhead_items.example.json tasks/wowhead_items.json
+```
+
+默认读取用户本地任务文件：
 
 - [tasks/wowhead_items.json](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tasks/wowhead_items.json)
+- 模板文件：
+  - [tasks/wowhead_items.example.json](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tasks/wowhead_items.example.json)
 
 命令：
 
@@ -231,8 +239,14 @@ python3 -m scripts.generate_mappings
 
 任务文件位于：
 
-- [tasks/wowhead_items.json](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tasks/wowhead_items.json)
 - [tasks/wowhead_items.example.json](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/crawler/tasks/wowhead_items.example.json)
+
+`tasks/wowhead_items.json` 是用户本地任务文件，不再纳入 git。  
+开始使用前，请先基于模板创建：
+
+```bash
+cp tasks/wowhead_items.example.json tasks/wowhead_items.json
+```
 
 当前 key 规则以 Wowhead label/value 为准，统一使用 `label_value` 形式。  
 例如：

@@ -1,2 +1,5 @@
 # Crawler output artifacts are local cache only.
 crawler/outputs/filter_pages/
+
+# User-local task file should be created from the example template.
+crawler/tasks/wowhead_items.json
