@@ -4,7 +4,9 @@ import time
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+import core.fetcher as fetcher_module
 from core.fetcher import (
     extract_listviewitems_json,
     fetch_manifest_results,
@@ -27,6 +29,127 @@ new Listview({data: listviewitems});
 
 
 class FetcherTest(unittest.TestCase):
+    def test_fetch_manifest_results_aborts_after_ten_consecutive_failures(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            tasks = []
+            for index in range(12):
+                tasks.append(
+                    {
+                        "task_id": f"armor-uncommon-head_1-cloth_armor_1-{index}",
+                        "status": "planned",
+                        "url": f"https://example.com/items/{index}",
+                        "category": "armor",
+                        "slot": "head_1",
+                        "type": "cloth_armor_1",
+                        "quality": "uncommon",
+                        "query_filters": {},
+                    }
+                )
+
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T18-00-00",
+                        "generated_at": "2026-03-18T18:00:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": len(tasks),
+                        "tasks": tasks,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            log_lines = []
+
+            with patch.object(fetcher_module, "FETCH_CONCURRENCY", 1):
+                with self.assertRaisesRegex(RuntimeError, "连续失败"):
+                    fetch_manifest_results(
+                        manifest_path,
+                        fetch_url=lambda _url: (_ for _ in ()).throw(RuntimeError("network error")),
+                        sleep_before_fetch=lambda: None,
+                        logger=log_lines.append,
+                        timestamp_fn=lambda: "2026-03-18 18:00:00",
+                    )
+
+            report_path = temp_path / "run-report.json"
+            self.assertTrue(report_path.exists())
+
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            statuses = [task["status"] for task in updated_manifest["tasks"]]
+            self.assertEqual(statuses.count("failed"), 10)
+            self.assertEqual(statuses.count("planned"), 2)
+
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertTrue(report["aborted_due_to_consecutive_failures"])
+            self.assertEqual(report["consecutive_failure_limit"], 10)
+            self.assertEqual(report["failed_count"], 10)
+            self.assertEqual(report["planned_count"], 2)
+            self.assertIn(
+                "[2026-03-18 18:00:00] ABORT consecutive_failures=10 limit=10",
+                log_lines,
+            )
+
+    def test_fetch_manifest_results_resets_consecutive_failure_streak_after_success(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            tasks = []
+            for index in range(12):
+                tasks.append(
+                    {
+                        "task_id": f"weapon-rare-main_hand_21-daggers_15-{index}",
+                        "status": "planned",
+                        "url": f"https://example.com/items/{index}",
+                        "category": "weapon",
+                        "slot": "main_hand_21",
+                        "type": "daggers_15",
+                        "quality": "rare",
+                        "query_filters": {},
+                    }
+                )
+
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T18-00-00",
+                        "generated_at": "2026-03-18T18:00:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": len(tasks),
+                        "tasks": tasks,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            responses = [RuntimeError("network error")] * 9 + [SAMPLE_HTML] + [RuntimeError("network error")] * 2
+
+            def fetch_with_sequence(_url):
+                result = responses.pop(0)
+                if isinstance(result, Exception):
+                    raise result
+                return result
+
+            with patch.object(fetcher_module, "FETCH_CONCURRENCY", 1):
+                fetch_manifest_results(
+                    manifest_path,
+                    fetch_url=fetch_with_sequence,
+                    sleep_before_fetch=lambda: None,
+                    logger=lambda _line: None,
+                    timestamp_fn=lambda: "2026-03-18 18:00:00",
+                )
+
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            statuses = [task["status"] for task in updated_manifest["tasks"]]
+            self.assertEqual(statuses.count("failed"), 11)
+            self.assertEqual(statuses.count("fetched"), 1)
+            self.assertFalse((temp_path / "run-report.json").exists())
+
     def test_fetch_manifest_results_logs_start_done_and_progress(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

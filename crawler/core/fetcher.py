@@ -2,16 +2,19 @@ import json
 import random
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
+
+from core.run_report import write_run_report
 
 
 LISTVIEW_ITEMS_PATTERN = re.compile(r"var\s+listviewitems\s*=\s*(\[[\s\S]*?\]);")
 FETCH_CONCURRENCY = 3
 FETCH_DELAY_MIN_SECONDS = 1.5
 FETCH_DELAY_MAX_SECONDS = 3.0
+CONSECUTIVE_FAILURE_LIMIT = 10
 
 
 def extract_listviewitems_json(html_text):
@@ -91,48 +94,126 @@ def _process_manifest_results(
     fetched_count = 0
     failed_count = 0
     total_count = len(eligible_tasks)
+    consecutive_failure_count = 0
+    abort_metadata = None
+    pending_tasks = iter(eligible_tasks)
+    future_to_task = {}
 
     with ThreadPoolExecutor(max_workers=FETCH_CONCURRENCY) as executor:
-        future_to_task = {
-            executor.submit(
-                _fetch_task_result,
-                task,
+        for _ in range(min(FETCH_CONCURRENCY, total_count)):
+            _submit_next_task(
+                executor,
+                future_to_task,
+                pending_tasks,
                 output_dir,
                 fetch_url,
                 sleep_before_fetch,
                 logger,
                 timestamp_fn,
-            ): task
-            for task in eligible_tasks
-        }
+            )
 
-        for future in as_completed(future_to_task):
-            task = future_to_task[future]
-            try:
-                item_count = future.result()
-                task["status"] = "fetched"
-                fetched_count += 1
-                _log(
-                    logger,
-                    timestamp_fn,
-                    f"DONE {task['task_id']} item_count={item_count}",
-                )
-            except Exception:
-                task["status"] = "failed"
-                failed_count += 1
-                _log(logger, timestamp_fn, f"FAIL {task['task_id']}")
+        while future_to_task:
+            done_futures, _pending = wait(
+                future_to_task.keys(),
+                return_when=FIRST_COMPLETED,
+            )
 
-            completed_count += 1
-            if completed_count % 10 == 0:
-                _log(
-                    logger,
-                    timestamp_fn,
-                    (
-                        f"PROGRESS done={completed_count}/{total_count} "
-                        f"fetched={fetched_count} failed={failed_count}"
-                    ),
-                )
+            for future in done_futures:
+                task = future_to_task.pop(future)
+                try:
+                    item_count = future.result()
+                    task["status"] = "fetched"
+                    fetched_count += 1
+                    consecutive_failure_count = 0
+                    _log(
+                        logger,
+                        timestamp_fn,
+                        f"DONE {task['task_id']} item_count={item_count}",
+                    )
+                except Exception:
+                    task["status"] = "failed"
+                    failed_count += 1
+                    consecutive_failure_count += 1
+                    _log(logger, timestamp_fn, f"FAIL {task['task_id']}")
 
+                    if abort_metadata is None and consecutive_failure_count >= CONSECUTIVE_FAILURE_LIMIT:
+                        abort_metadata = {
+                            "aborted_due_to_consecutive_failures": True,
+                            "consecutive_failure_limit": CONSECUTIVE_FAILURE_LIMIT,
+                        }
+                        _log(
+                            logger,
+                            timestamp_fn,
+                            (
+                                "ABORT "
+                                f"consecutive_failures={consecutive_failure_count} "
+                                f"limit={CONSECUTIVE_FAILURE_LIMIT}"
+                            ),
+                        )
+
+                completed_count += 1
+                if completed_count % 10 == 0:
+                    _log(
+                        logger,
+                        timestamp_fn,
+                        (
+                            f"PROGRESS done={completed_count}/{total_count} "
+                            f"fetched={fetched_count} failed={failed_count}"
+                        ),
+                    )
+
+                if abort_metadata is None:
+                    _submit_next_task(
+                        executor,
+                        future_to_task,
+                        pending_tasks,
+                        output_dir,
+                        fetch_url,
+                        sleep_before_fetch,
+                        logger,
+                        timestamp_fn,
+                    )
+
+    _write_manifest(manifest_file, manifest)
+
+    if abort_metadata is not None:
+        write_run_report(manifest_file, extra_fields=abort_metadata)
+        raise RuntimeError(
+            f"连续失败达到上限 {CONSECUTIVE_FAILURE_LIMIT}，已中止抓取并写出任务总结。"
+        )
+
+
+def _submit_next_task(
+    executor,
+    future_to_task,
+    pending_tasks,
+    output_dir,
+    fetch_url,
+    sleep_before_fetch,
+    logger,
+    timestamp_fn,
+):
+    """向线程池补充一个待抓取任务。"""
+    try:
+        task = next(pending_tasks)
+    except StopIteration:
+        return False
+
+    future = executor.submit(
+        _fetch_task_result,
+        task,
+        output_dir,
+        fetch_url,
+        sleep_before_fetch,
+        logger,
+        timestamp_fn,
+    )
+    future_to_task[future] = task
+    return True
+
+
+def _write_manifest(manifest_file, manifest):
+    """回写当前 manifest 状态。"""
     manifest_file.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",

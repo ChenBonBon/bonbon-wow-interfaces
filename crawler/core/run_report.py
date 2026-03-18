@@ -6,7 +6,7 @@ DEFAULT_REPORT_FILE_NAME = 'run-report.json'
 ITEMS_UNIQUE_FILE_NAME = 'items.unique.json'
 
 
-def build_run_report(manifest_path):
+def build_run_report(manifest_path, extra_fields=None):
     """从 manifest 与任务结果文件构建单次运行统计。"""
     manifest_file = Path(manifest_path)
     manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
@@ -35,7 +35,7 @@ def build_run_report(manifest_path):
     items_unique_path = run_dir / ITEMS_UNIQUE_FILE_NAME
     unique_items = json.loads(items_unique_path.read_text(encoding='utf-8')) if items_unique_path.exists() else []
 
-    return {
+    report = {
         'run_id': manifest.get('run_id'),
         'task_count': len(tasks),
         'fetched_count': len(fetched_task_ids),
@@ -45,13 +45,15 @@ def build_run_report(manifest_path):
         'failed_task_ids': failed_task_ids,
         'empty_result_task_ids': empty_result_task_ids,
     }
+    if extra_fields:
+        report.update(extra_fields)
+    return report
 
 
-
-def write_run_report(manifest_path, output_path=None):
+def write_run_report(manifest_path, output_path=None, extra_fields=None):
     """写出单次运行统计 JSON。"""
     manifest_file = Path(manifest_path)
     output_file = Path(output_path) if output_path is not None else manifest_file.parent / DEFAULT_REPORT_FILE_NAME
-    report = build_run_report(manifest_file)
+    report = build_run_report(manifest_file, extra_fields=extra_fields)
     output_file.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return output_file
