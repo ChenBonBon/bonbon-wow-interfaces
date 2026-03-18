@@ -513,7 +513,8 @@ class ScriptsTest(unittest.TestCase):
             )
 
             self.assertEqual(processed_manifest_path, manifest_path)
-            self.assertTrue((temp_path / "uncommon-head-cloth.json").exists())
+            results = json.loads((temp_path / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("uncommon-head-cloth", results)
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
 
@@ -538,30 +539,25 @@ class ScriptsTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (temp_path / "task-a.json").write_text(
+            (temp_path / "items.by-task.json").write_text(
                 json.dumps(
                     {
-                        "task_id": "task-a",
-                        "url": "https://example.com/a",
-                        "items": [
-                            {"itemId": 1001, "name": "Alpha Hood"},
-                            {"itemId": 1002, "name": "Beta Hood"},
-                        ],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-            (temp_path / "task-b.json").write_text(
-                json.dumps(
-                    {
-                        "task_id": "task-b",
-                        "url": "https://example.com/b",
-                        "items": [
-                            {"itemId": 1002, "name": "Beta Hood Duplicate"},
-                            {"itemId": 1003, "name": "Gamma Hood"},
-                        ],
+                        "task-a": {
+                            "task_id": "task-a",
+                            "url": "https://example.com/a",
+                            "items": [
+                                {"itemId": 1001, "name": "Alpha Hood"},
+                                {"itemId": 1002, "name": "Beta Hood"},
+                            ],
+                        },
+                        "task-b": {
+                            "task_id": "task-b",
+                            "url": "https://example.com/b",
+                            "items": [
+                                {"itemId": 1002, "name": "Beta Hood Duplicate"},
+                                {"itemId": 1003, "name": "Gamma Hood"},
+                            ],
+                        },
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -611,7 +607,8 @@ class ScriptsTest(unittest.TestCase):
                     fetch_url=lambda _url: '<script>var listviewitems = [{"id":2620,"name":"Augural Shroud"}];</script>',
                 )
 
-            self.assertTrue((temp_path / "failed-task.json").exists())
+            results = json.loads((temp_path / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("failed-task", results)
             self.assertTrue((temp_path / "items.unique.json").exists())
             self.assertFalse((temp_path / "planned-task.json").exists())
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -641,14 +638,16 @@ class ScriptsTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (temp_path / "done-task.json").write_text(
+            (temp_path / "items.by-task.json").write_text(
                 json.dumps(
                     {
-                        "task_id": "done-task",
-                        "url": "https://example.com/done",
-                        "items": [
-                            {"itemId": 1001, "name": "Alpha Hood"},
-                        ],
+                        "done-task": {
+                            "task_id": "done-task",
+                            "url": "https://example.com/done",
+                            "items": [
+                                {"itemId": 1001, "name": "Alpha Hood"},
+                            ],
+                        },
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -663,7 +662,8 @@ class ScriptsTest(unittest.TestCase):
             )
 
             self.assertEqual(processed_manifest_path, manifest_path)
-            self.assertTrue((temp_path / "failed-task.json").exists())
+            results = json.loads((temp_path / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("failed-task", results)
             self.assertTrue((temp_path / "items.unique.json").exists())
             self.assertTrue(output_path.exists())
             unique_items = json.loads((temp_path / "items.unique.json").read_text(encoding="utf-8"))
@@ -708,7 +708,8 @@ class ScriptsTest(unittest.TestCase):
             )
 
             self.assertTrue(manifest_path.exists())
-            self.assertTrue((manifest_path.parent / "uncommon-head-cloth.json").exists())
+            results = json.loads((manifest_path.parent / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("uncommon-head-cloth", results)
             self.assertTrue((manifest_path.parent / "items.unique.json").exists())
             self.assertTrue(output_path.exists())
             unique_items = json.loads((manifest_path.parent / "items.unique.json").read_text(encoding="utf-8"))
@@ -834,17 +835,12 @@ class ScriptsTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (temp_path / "done-task.json").write_text(
+            (temp_path / "items.by-task.json").write_text(
                 json.dumps(
-                    {"task_id": "done-task", "items": [{"itemId": 1001, "name": "Alpha Hood"}]},
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-            (temp_path / "empty-task.json").write_text(
-                json.dumps(
-                    {"task_id": "empty-task", "items": []},
+                    {
+                        "done-task": {"task_id": "done-task", "items": [{"itemId": 1001, "name": "Alpha Hood"}]},
+                        "empty-task": {"task_id": "empty-task", "items": []},
+                    },
                     ensure_ascii=False,
                     indent=2,
                 ),

@@ -7,34 +7,29 @@ from core.aggregator import build_unique_items, write_unique_items
 
 
 class AggregatorTest(unittest.TestCase):
-    def test_build_unique_items_only_uses_fetched_tasks_and_deduplicates_by_item_id(self):
+    def test_build_unique_items_reads_items_by_task_file_and_deduplicates(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = self._write_manifest(temp_path)
-            (temp_path / "task-a.json").write_text(
+            (temp_path / "items.by-task.json").write_text(
                 json.dumps(
                     {
-                        "task_id": "task-a",
-                        "url": "https://example.com/a",
-                        "items": [
-                            {"itemId": 1001, "name": "Alpha Hood"},
-                            {"itemId": 1002, "name": "Beta Hood"},
-                        ],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-            (temp_path / "task-b.json").write_text(
-                json.dumps(
-                    {
-                        "task_id": "task-b",
-                        "url": "https://example.com/b",
-                        "items": [
-                            {"itemId": 1002, "name": "Beta Hood Duplicate"},
-                            {"itemId": 1003, "name": "Gamma Hood"},
-                        ],
+                        "task-a": {
+                            "task_id": "task-a",
+                            "url": "https://example.com/a",
+                            "items": [
+                                {"itemId": 1001, "name": "Alpha Hood"},
+                                {"itemId": 1002, "name": "Beta Hood"},
+                            ],
+                        },
+                        "task-b": {
+                            "task_id": "task-b",
+                            "url": "https://example.com/b",
+                            "items": [
+                                {"itemId": 1002, "name": "Beta Hood Duplicate"},
+                                {"itemId": 1003, "name": "Gamma Hood"},
+                            ],
+                        },
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -57,29 +52,24 @@ class AggregatorTest(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = self._write_manifest(temp_path)
-            (temp_path / "task-a.json").write_text(
+            (temp_path / "items.by-task.json").write_text(
                 json.dumps(
                     {
-                        "task_id": "task-a",
-                        "url": "https://example.com/a",
-                        "items": [
-                            {"itemId": 1001, "name": "Alpha Hood"},
-                            {"itemId": 1002, "name": "Beta Hood"},
-                        ],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-            (temp_path / "task-b.json").write_text(
-                json.dumps(
-                    {
-                        "task_id": "task-b",
-                        "url": "https://example.com/b",
-                        "items": [
-                            {"itemId": 1002, "name": "Beta Hood Duplicate"},
-                        ],
+                        "task-a": {
+                            "task_id": "task-a",
+                            "url": "https://example.com/a",
+                            "items": [
+                                {"itemId": 1001, "name": "Alpha Hood"},
+                                {"itemId": 1002, "name": "Beta Hood"},
+                            ],
+                        },
+                        "task-b": {
+                            "task_id": "task-b",
+                            "url": "https://example.com/b",
+                            "items": [
+                                {"itemId": 1002, "name": "Beta Hood Duplicate"},
+                            ],
+                        },
                     },
                     ensure_ascii=False,
                     indent=2,

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from core.aggregator import read_items_by_task
+
 
 DEFAULT_REPORT_FILE_NAME = 'run-report.json'
 ITEMS_UNIQUE_FILE_NAME = 'items.unique.json'
@@ -11,6 +13,7 @@ def build_run_report(manifest_path, extra_fields=None):
     manifest_file = Path(manifest_path)
     manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
     run_dir = manifest_file.parent
+    items_by_task = read_items_by_task(manifest_file)
 
     tasks = manifest.get('tasks', [])
     fetched_task_ids = []
@@ -24,8 +27,7 @@ def build_run_report(manifest_path, extra_fields=None):
         status = task.get('status')
         if status == 'fetched':
             fetched_task_ids.append(task_id)
-            task_result_path = run_dir / f'{task_id}.json'
-            task_result = json.loads(task_result_path.read_text(encoding='utf-8'))
+            task_result = items_by_task.get(task_id, {'items': []})
             if len(task_result.get('items', [])) == 0:
                 empty_result_task_ids.append(task_id)
         elif status == 'failed':

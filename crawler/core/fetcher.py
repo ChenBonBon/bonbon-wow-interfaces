@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
 
+from core.aggregator import ITEMS_BY_TASK_FILE_NAME, read_items_by_task
 from core.run_report import write_run_report
 
 
@@ -93,6 +94,7 @@ def _process_manifest_results(
     logger = logger or print
     timestamp_fn = timestamp_fn or _default_timestamp
     output_dir = manifest_file.parent
+    items_by_task = read_items_by_task(manifest_file)
     eligible_tasks = [task for task in manifest["tasks"] if task.get("status") in allowed_statuses]
     completed_count = 0
     fetched_count = 0
@@ -125,7 +127,9 @@ def _process_manifest_results(
             for future in done_futures:
                 task = future_to_task.pop(future)
                 try:
-                    item_count = future.result()
+                    task_result = future.result()
+                    items_by_task[task["task_id"]] = task_result
+                    item_count = len(task_result.get("items", []))
                     task["status"] = "fetched"
                     task.pop("error_message", None)
                     fetched_count += 1
@@ -137,6 +141,7 @@ def _process_manifest_results(
                     )
                 except Exception as error:
                     task["status"] = "failed"
+                    items_by_task.pop(task["task_id"], None)
                     task["error_message"] = str(error)
                     failed_count += 1
                     consecutive_failure_count += 1
@@ -181,6 +186,7 @@ def _process_manifest_results(
                     )
 
     _write_manifest(manifest_file, manifest)
+    _write_items_by_task(output_dir, items_by_task)
 
     if abort_metadata is not None:
         write_run_report(manifest_file, extra_fields=abort_metadata)
@@ -238,20 +244,11 @@ def _fetch_task_result(task, output_dir, fetch_url, sleep_before_fetch, logger, 
     sleep_before_fetch()
     html_text = fetch_url(task["url"])
     items = parse_items_from_html(html_text)
-    result_path = output_dir / f"{task['task_id']}.json"
-    result_path.write_text(
-        json.dumps(
-            {
-                "task_id": task["task_id"],
-                "url": task["url"],
-                "items": items,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    return len(items)
+    return {
+        "task_id": task["task_id"],
+        "url": task["url"],
+        "items": items,
+    }
 
 
 def _sleep_before_fetch(rand_uniform=None, sleep=None):
@@ -280,3 +277,15 @@ def _default_timestamp():
 def _log(logger, timestamp_fn, message):
     """统一输出带时间戳的抓取日志。"""
     logger(f"[{timestamp_fn()}] {message}")
+
+
+def _write_items_by_task(output_dir, items_by_task):
+    """回写单次运行的按任务结果总文件。"""
+    results_path = Path(output_dir) / ITEMS_BY_TASK_FILE_NAME
+    if not items_by_task:
+        results_path.unlink(missing_ok=True)
+        return
+    results_path.write_text(
+        json.dumps(items_by_task, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )

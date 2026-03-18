@@ -46,7 +46,7 @@ class RunReportTest(unittest.TestCase):
                 ],
             )
 
-    def test_write_run_report_writes_json_summary_with_empty_and_failed_tasks(self):
+    def test_write_run_report_reads_items_by_task_file(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = temp_path / 'manifest.json'
@@ -70,22 +70,17 @@ class RunReportTest(unittest.TestCase):
                 ),
                 encoding='utf-8',
             )
-            (temp_path / 'done-task.json').write_text(
+            (temp_path / 'items.by-task.json').write_text(
                 json.dumps(
                     {
-                        'task_id': 'done-task',
-                        'items': [{'itemId': 1001, 'name': 'Alpha Hood'}],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding='utf-8',
-            )
-            (temp_path / 'empty-task.json').write_text(
-                json.dumps(
-                    {
-                        'task_id': 'empty-task',
-                        'items': [],
+                        'done-task': {
+                            'task_id': 'done-task',
+                            'items': [{'itemId': 1001, 'name': 'Alpha Hood'}],
+                        },
+                        'empty-task': {
+                            'task_id': 'empty-task',
+                            'items': [],
+                        },
                     },
                     ensure_ascii=False,
                     indent=2,

@@ -297,17 +297,23 @@ class FetcherTest(unittest.TestCase):
                 fetch_url=lambda url: SAMPLE_HTML,
             )
 
-            result_path = temp_path / "uncommon-head-cloth.json"
-            self.assertTrue(result_path.exists())
-            result_data = json.loads(result_path.read_text(encoding="utf-8"))
-            self.assertEqual(result_data["task_id"], "uncommon-head-cloth")
+            results_path = temp_path / "items.by-task.json"
+            self.assertTrue(results_path.exists())
+            result_data = json.loads(results_path.read_text(encoding="utf-8"))
             self.assertEqual(
-                result_data["items"],
-                [
-                    {"itemId": 2620, "name": "Augural Shroud"},
-                    {"itemId": 2621, "name": "Cowl of Necromancy"},
-                ],
+                result_data,
+                {
+                    "uncommon-head-cloth": {
+                        "task_id": "uncommon-head-cloth",
+                        "url": "https://example.com/items/1",
+                        "items": [
+                            {"itemId": 2620, "name": "Augural Shroud"},
+                            {"itemId": 2621, "name": "Cowl of Necromancy"},
+                        ],
+                    }
+                },
             )
+            self.assertFalse((temp_path / "uncommon-head-cloth.json").exists())
 
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
@@ -350,13 +356,13 @@ class FetcherTest(unittest.TestCase):
                 timestamp_fn=lambda: "2026-03-18 20:00:00",
             )
 
-            result_path = temp_path / "weapon-uncommon-main_hand_21-daggers_15.json"
-            result_data = json.loads(result_path.read_text(encoding="utf-8"))
+            results_path = temp_path / "items.by-task.json"
+            result_data = json.loads(results_path.read_text(encoding="utf-8"))
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
             self.assertNotIn("error_message", updated_manifest["tasks"][0])
-            self.assertEqual(result_data["items"], [])
+            self.assertEqual(result_data["weapon-uncommon-main_hand_21-daggers_15"]["items"], [])
 
     def test_fetch_manifest_results_parses_js_object_literal_payload_as_success(self):
         with TemporaryDirectory() as temp_dir:
@@ -396,14 +402,14 @@ class FetcherTest(unittest.TestCase):
                 timestamp_fn=lambda: "2026-03-18 20:10:00",
             )
 
-            result_path = temp_path / "weapon-rare-main_hand_21-one_handed_maces_4.json"
-            result_data = json.loads(result_path.read_text(encoding="utf-8"))
+            results_path = temp_path / "items.by-task.json"
+            result_data = json.loads(results_path.read_text(encoding="utf-8"))
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
             self.assertNotIn("error_message", updated_manifest["tasks"][0])
             self.assertEqual(
-                result_data["items"],
+                result_data["weapon-rare-main_hand_21-one_handed_maces_4"]["items"],
                 [{"itemId": 187566, "name": "Arcsmasher"}],
             )
 
@@ -449,6 +455,7 @@ class FetcherTest(unittest.TestCase):
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
             self.assertEqual(updated_manifest["tasks"][0]["error_message"], "network error")
             self.assertFalse((temp_path / "weapon-rare-main_hand_21-daggers_15.json").exists())
+            self.assertFalse((temp_path / "items.by-task.json").exists())
 
     def test_retry_failed_manifest_results_clears_stale_error_message_after_success(self):
         with TemporaryDirectory() as temp_dir:
@@ -492,6 +499,8 @@ class FetcherTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
             self.assertNotIn("error_message", updated_manifest["tasks"][0])
+            results = json.loads((temp_path / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("failed-task", results)
 
     def test_fetch_manifest_results_logs_failures(self):
         with TemporaryDirectory() as temp_dir:
@@ -660,7 +669,8 @@ class FetcherTest(unittest.TestCase):
             self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
             self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
             self.assertEqual(updated_manifest["tasks"][2]["status"], "fetched")
-            self.assertTrue((temp_path / "failed-task.json").exists())
+            results = json.loads((temp_path / "items.by-task.json").read_text(encoding="utf-8"))
+            self.assertIn("failed-task", results)
             self.assertFalse((temp_path / "planned-task.json").exists())
 
     def test_retry_failed_manifest_results_keeps_failed_status_when_retry_fails(self):
@@ -704,6 +714,7 @@ class FetcherTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
             self.assertFalse((temp_path / "failed-task.json").exists())
+            self.assertFalse((temp_path / "items.by-task.json").exists())
 
     def test_sleep_before_fetch_uses_random_delay_between_one_point_five_and_three_seconds(self):
         sleep_calls = []
