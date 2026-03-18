@@ -11,6 +11,7 @@ from core.run_report import write_run_report
 
 
 LISTVIEW_ITEMS_PATTERN = re.compile(r"var\s+listviewitems\s*=\s*(\[[\s\S]*?\]);")
+ZERO_RESULTS_MARKER = "Your criteria did not match any items."
 FETCH_CONCURRENCY = 3
 FETCH_DELAY_MIN_SECONDS = 1.5
 FETCH_DELAY_MAX_SECONDS = 3.0
@@ -27,6 +28,8 @@ def extract_listviewitems_json(html_text):
 
 def parse_items_from_html(html_text):
     """从页面 HTML 中解析最小 item 字段。"""
+    if _is_zero_result_page(html_text):
+        return []
     raw_items = json.loads(extract_listviewitems_json(html_text))
     return [
         {
@@ -256,6 +259,11 @@ def _sleep_before_fetch(rand_uniform=None, sleep=None):
     sleep = sleep or time.sleep
     delay_seconds = rand_uniform(FETCH_DELAY_MIN_SECONDS, FETCH_DELAY_MAX_SECONDS)
     sleep(delay_seconds)
+
+
+def _is_zero_result_page(html_text):
+    """判断页面是否为 Wowhead 的零结果空列表页。"""
+    return ZERO_RESULTS_MARKER in html_text
 
 
 def _default_timestamp():

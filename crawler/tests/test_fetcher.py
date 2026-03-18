@@ -27,6 +27,15 @@ new Listview({data: listviewitems});
 </html>
 """
 
+ZERO_RESULT_HTML = """
+<!DOCTYPE html>
+<html>
+<body>
+<div class="text">Your criteria did not match any items. </div>
+</body>
+</html>
+"""
+
 
 class FetcherTest(unittest.TestCase):
     def test_fetch_manifest_results_aborts_after_ten_consecutive_failures(self):
@@ -229,6 +238,10 @@ class FetcherTest(unittest.TestCase):
             ],
         )
 
+    def test_parse_items_from_html_returns_empty_list_for_zero_result_page(self):
+        items = parse_items_from_html(ZERO_RESULT_HTML)
+        self.assertEqual(items, [])
+
     def test_fetch_manifest_results_writes_result_and_updates_status(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -278,6 +291,52 @@ class FetcherTest(unittest.TestCase):
 
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
+
+    def test_fetch_manifest_results_treats_zero_result_page_as_success(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T20-00-00",
+                        "generated_at": "2026-03-18T20:00:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 1,
+                        "tasks": [
+                            {
+                                "task_id": "weapon-uncommon-main_hand_21-daggers_15",
+                                "status": "planned",
+                                "url": "https://example.com/items/zero",
+                                "category": "weapon",
+                                "slot": "main_hand_21",
+                                "type": "daggers_15",
+                                "quality": "uncommon",
+                                "query_filters": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            fetch_manifest_results(
+                manifest_path,
+                fetch_url=lambda _url: ZERO_RESULT_HTML,
+                sleep_before_fetch=lambda: None,
+                logger=lambda _line: None,
+                timestamp_fn=lambda: "2026-03-18 20:00:00",
+            )
+
+            result_path = temp_path / "weapon-uncommon-main_hand_21-daggers_15.json"
+            result_data = json.loads(result_path.read_text(encoding="utf-8"))
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
+            self.assertNotIn("error_message", updated_manifest["tasks"][0])
+            self.assertEqual(result_data["items"], [])
 
     def test_fetch_manifest_results_marks_failed_when_fetch_errors(self):
         with TemporaryDirectory() as temp_dir:
