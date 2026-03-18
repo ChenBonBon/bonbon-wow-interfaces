@@ -81,7 +81,7 @@ cp tasks/wowhead_items.example.json tasks/wowhead_items.json
 2. 抓取 Wowhead 页面
 3. 聚合为 `items.unique.json`
 4. 导出 Lua 到：
-   - [DisenchantableByWowhead.lua](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/QuickDisenchant/DisenchantableByWowhead.lua)
+   - [NonDisenchantableByWowhead.lua](/Users/bonbon/Documents/Code/bonbon-wow-interfaces/QuickDisenchant/NonDisenchantableByWowhead.lua)
 
 ### 3. 重跑失败任务
 
@@ -99,7 +99,27 @@ cp tasks/wowhead_items.example.json tasks/wowhead_items.json
 
 如果 `manifest.json` 里还有未完成任务，导出会直接失败，不会写入残缺 Lua。
 
-### 4. 调试用：单独抓取 Filter.init
+### 4. 生成运行结果统计
+
+命令：
+
+```bash
+./bin/report_run.sh outputs/<run_id>/manifest.json
+```
+
+默认会写出：
+
+- `outputs/<run_id>/run-report.json`
+
+统计内容包括：
+
+- 总任务数
+- `fetched / failed / planned` 数量
+- `items.unique.json` 的唯一物品数量
+- `failed_task_ids`
+- `empty_result_task_ids`
+
+### 5. 调试用：单独抓取 Filter.init
 
 命令：
 
@@ -121,7 +141,7 @@ cp tasks/wowhead_items.example.json tasks/wowhead_items.json
 - `filter-page.html`
 - `filter-page.filters.json`
 
-### 5. 调试用：单独生成 mappings 数据
+### 6. 调试用：单独生成 mappings 数据
 
 命令：
 
@@ -183,6 +203,12 @@ python3 -m scripts.run_all tasks/wowhead_items.json
 
 ```bash
 python3 -m scripts.retry_failed_run outputs/<run_id>/manifest.json
+```
+
+生成运行统计：
+
+```bash
+python3 -m scripts.report_run outputs/<run_id>/manifest.json
 ```
 
 ### Filter.init 与 mappings 流程
@@ -313,4 +339,10 @@ python3 -m scripts.generate_normalized_mappings
 
 ```bash
 ./bin/retry_failed.sh outputs/<run_id>/manifest.json
+```
+
+完成后如果你要查看统计：
+
+```bash
+./bin/report_run.sh outputs/<run_id>/manifest.json
 ```

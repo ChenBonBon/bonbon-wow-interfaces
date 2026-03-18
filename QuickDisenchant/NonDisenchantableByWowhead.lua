@@ -1,0 +1,2 @@
+QD = QD or _G.QuickDisenchantNS
+QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS = {}

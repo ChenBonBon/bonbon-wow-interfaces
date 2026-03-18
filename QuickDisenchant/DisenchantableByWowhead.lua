@@ -1,2 +1,0 @@
-QD = QD or _G.QuickDisenchantNS
-QD.WOWHEAD_DISENCHANTABLE_ITEM_IDS = {}

@@ -17,7 +17,7 @@ class LuaExporterTest(unittest.TestCase):
 
         self.assertEqual(
             lua_text,
-            "QD = QD or _G.QuickDisenchantNS\nQD.WOWHEAD_DISENCHANTABLE_ITEM_IDS = {\n  [1001] = true,\n  [1002] = true,\n}\n",
+            "QD = QD or _G.QuickDisenchantNS\nQD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS = {\n  [1001] = true,\n  [1002] = true,\n}\n",
         )
 
     def test_write_lua_item_id_table_writes_target_file_when_manifest_is_complete(self):
@@ -25,7 +25,7 @@ class LuaExporterTest(unittest.TestCase):
             temp_path = Path(temp_dir)
             manifest_path = temp_path / "manifest.json"
             items_unique_path = temp_path / "items.unique.json"
-            output_path = temp_path / "DisenchantableByWowhead.lua"
+            output_path = temp_path / "NonDisenchantableByWowhead.lua"
             manifest_path.write_text(
                 json.dumps(
                     {

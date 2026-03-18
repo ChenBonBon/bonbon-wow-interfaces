@@ -6,7 +6,7 @@
 ## SavedVariablesPerCharacter: QuickDisenchantDB
 
 Core.lua
-DisenchantableByWowhead.lua
+NonDisenchantableByWowhead.lua
 Data.lua
 Disenchant.lua
 UI.lua

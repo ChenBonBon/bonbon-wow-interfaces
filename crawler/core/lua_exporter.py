@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 
-DEFAULT_LUA_OUTPUT_PATH = Path(__file__).resolve().parents[2] / "QuickDisenchant" / "DisenchantableByWowhead.lua"
+DEFAULT_LUA_OUTPUT_PATH = Path(__file__).resolve().parents[2] / "QuickDisenchant" / "NonDisenchantableByWowhead.lua"
 ITEMS_UNIQUE_FILE_NAME = "items.unique.json"
 
 
@@ -11,7 +11,7 @@ def render_lua_item_id_table(items):
     sorted_ids = sorted(item["itemId"] for item in items)
     lines = [
         "QD = QD or _G.QuickDisenchantNS",
-        "QD.WOWHEAD_DISENCHANTABLE_ITEM_IDS = {",
+        "QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS = {",
     ]
 
     for item_id in sorted_ids:

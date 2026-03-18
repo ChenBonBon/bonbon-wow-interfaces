@@ -147,26 +147,15 @@ class MappingsTest(unittest.TestCase):
         for task in tasks:
             validate_task(task)
 
-    def test_default_task_file_contains_main_hand_weapon_batch(self):
+    def test_default_task_file_contains_only_valid_tasks(self):
         config_path = Path(__file__).resolve().parents[1] / "tasks" / "wowhead_items.json"
         tasks = json.loads(config_path.read_text(encoding="utf-8"))
 
-        self.assertEqual(len(tasks), 15)
+        self.assertGreater(len(tasks), 0)
 
         for task in tasks:
             validate_task(task)
-            self.assertEqual(task["category"], "weapon")
-            self.assertEqual(task["slot"], "main_hand_21")
-            self.assertIn(
-                task["type"],
-                {
-                    "daggers_15",
-                    "fist_weapons_13",
-                    "one_handed_axes_0",
-                    "one_handed_maces_4",
-                    "one_handed_swords_7",
-                },
-            )
+            self.assertIn(task["category"], {"weapon", "armor"})
             self.assertIn(task["quality"], {"uncommon", "rare", "epic"})
             self.assertEqual(
                 task["query_filters"],

@@ -11,6 +11,7 @@ from scripts.fetch_run import run as run_fetch
 from scripts.generate_mappings import run as run_generate_mappings
 from scripts.generate_normalized_mappings import run as run_generate_normalized_mappings
 from scripts.generate_run import run as run_generate
+from scripts.report_run import run as run_report
 from scripts.retry_failed_run import run as run_retry_failed
 from scripts.run_all import run as run_all
 
@@ -97,6 +98,22 @@ class ScriptsTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Usage: python3 -m scripts.retry_failed_run", result.stderr)
+
+    def test_report_run_shell_wrapper_exists_and_surfaces_usage(self):
+        script_path = Path(__file__).resolve().parents[1] / "bin" / "report_run.sh"
+
+        self.assertTrue(script_path.exists())
+        self.assertTrue(os.access(script_path, os.X_OK))
+
+        result = subprocess.run(
+            [str(script_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Usage: python3 -m scripts.report_run", result.stderr)
 
     def test_fetch_filter_init_shell_wrapper_runs_fetch_then_extract(self):
         script_path = Path(__file__).resolve().parents[1] / "bin" / "fetch_filter_init.sh"
@@ -600,13 +617,13 @@ class ScriptsTest(unittest.TestCase):
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "planned")
             self.assertEqual(updated_manifest["tasks"][1]["status"], "fetched")
-            self.assertFalse((temp_path / "DisenchantableByWowhead.lua").exists())
+            self.assertFalse((temp_path / "NonDisenchantableByWowhead.lua").exists())
 
     def test_retry_failed_run_retries_then_aggregates_and_exports(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = temp_path / "manifest.json"
-            output_path = temp_path / "DisenchantableByWowhead.lua"
+            output_path = temp_path / "NonDisenchantableByWowhead.lua"
             manifest_path.write_text(
                 json.dumps(
                     {
@@ -664,7 +681,7 @@ class ScriptsTest(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             task_file = temp_path / "tasks.json"
-            output_path = temp_path / "DisenchantableByWowhead.lua"
+            output_path = temp_path / "NonDisenchantableByWowhead.lua"
             task_file.write_text(
                 json.dumps(
                     [
@@ -731,7 +748,7 @@ class ScriptsTest(unittest.TestCase):
             temp_path = Path(temp_dir)
             manifest_path = temp_path / "manifest.json"
             items_unique_path = temp_path / "items.unique.json"
-            output_path = temp_path / "DisenchantableByWowhead.lua"
+            output_path = temp_path / "NonDisenchantableByWowhead.lua"
             manifest_path.write_text(
                 json.dumps(
                     {
@@ -771,7 +788,7 @@ class ScriptsTest(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             manifest_path = temp_path / "manifest.json"
-            output_path = temp_path / "DisenchantableByWowhead.lua"
+            output_path = temp_path / "NonDisenchantableByWowhead.lua"
             manifest_path.write_text(
                 json.dumps(
                     {
@@ -795,10 +812,64 @@ class ScriptsTest(unittest.TestCase):
 
             self.assertFalse(output_path.exists())
 
+    def test_report_run_writes_run_report_json(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            output_path = temp_path / "run-report.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-14T15-30-00",
+                        "generated_at": "2026-03-14T15:30:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 2,
+                        "tasks": [
+                            {"task_id": "done-task", "status": "fetched"},
+                            {"task_id": "empty-task", "status": "fetched"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (temp_path / "done-task.json").write_text(
+                json.dumps(
+                    {"task_id": "done-task", "items": [{"itemId": 1001, "name": "Alpha Hood"}]},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (temp_path / "empty-task.json").write_text(
+                json.dumps(
+                    {"task_id": "empty-task", "items": []},
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (temp_path / "items.unique.json").write_text(
+                json.dumps(
+                    [{"itemId": 1001, "name": "Alpha Hood"}],
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            written_path = run_report([str(manifest_path), str(output_path)])
+
+            self.assertEqual(written_path, output_path)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["empty_result_task_ids"], ["empty-task"])
+            self.assertEqual(report["unique_item_count"], 1)
+
     def test_quickdisenchant_toc_includes_wowhead_data_file(self):
         toc_path = Path(__file__).resolve().parents[2] / "QuickDisenchant" / "QuickDisenchant.toc"
         toc_text = toc_path.read_text(encoding="utf-8")
-        self.assertIn("DisenchantableByWowhead.lua", toc_text)
+        self.assertIn("NonDisenchantableByWowhead.lua", toc_text)
 
 
 if __name__ == "__main__":
