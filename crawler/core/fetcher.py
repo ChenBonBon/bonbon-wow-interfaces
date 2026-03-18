@@ -162,6 +162,7 @@ def _process_manifest_results(
                             ),
                         )
 
+                _write_items_by_task(output_dir, items_by_task)
                 completed_count += 1
                 if completed_count % 10 == 0:
                     _log(
@@ -186,7 +187,6 @@ def _process_manifest_results(
                     )
 
     _write_manifest(manifest_file, manifest)
-    _write_items_by_task(output_dir, items_by_task)
 
     if abort_metadata is not None:
         write_run_report(manifest_file, extra_fields=abort_metadata)
