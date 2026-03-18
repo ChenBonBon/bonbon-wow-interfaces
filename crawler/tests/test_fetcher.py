@@ -319,7 +319,51 @@ class FetcherTest(unittest.TestCase):
 
             updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(updated_manifest["tasks"][0]["status"], "failed")
+            self.assertEqual(updated_manifest["tasks"][0]["error_message"], "network error")
             self.assertFalse((temp_path / "weapon-rare-main_hand_21-daggers_15.json").exists())
+
+    def test_retry_failed_manifest_results_clears_stale_error_message_after_success(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T19-00-00",
+                        "generated_at": "2026-03-18T19:00:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 1,
+                        "tasks": [
+                            {
+                                "task_id": "failed-task",
+                                "status": "failed",
+                                "error_message": "HTTP Error 403: Forbidden",
+                                "url": "https://example.com/failed",
+                                "category": "weapon",
+                                "slot": "main_hand_21",
+                                "type": "daggers_15",
+                                "quality": "rare",
+                                "query_filters": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            retry_failed_manifest_results(
+                manifest_path,
+                fetch_url=lambda _url: SAMPLE_HTML,
+                sleep_before_fetch=lambda: None,
+                logger=lambda _line: None,
+                timestamp_fn=lambda: "2026-03-18 19:00:00",
+            )
+
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
+            self.assertNotIn("error_message", updated_manifest["tasks"][0])
 
     def test_fetch_manifest_results_logs_failures(self):
         with TemporaryDirectory() as temp_dir:

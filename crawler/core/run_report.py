@@ -15,6 +15,7 @@ def build_run_report(manifest_path, extra_fields=None):
     tasks = manifest.get('tasks', [])
     fetched_task_ids = []
     failed_task_ids = []
+    failed_tasks = []
     planned_task_ids = []
     empty_result_task_ids = []
 
@@ -29,6 +30,12 @@ def build_run_report(manifest_path, extra_fields=None):
                 empty_result_task_ids.append(task_id)
         elif status == 'failed':
             failed_task_ids.append(task_id)
+            failed_tasks.append(
+                {
+                    'task_id': task_id,
+                    'error_message': task.get('error_message', ''),
+                }
+            )
         elif status == 'planned':
             planned_task_ids.append(task_id)
 
@@ -43,6 +50,7 @@ def build_run_report(manifest_path, extra_fields=None):
         'planned_count': len(planned_task_ids),
         'unique_item_count': len(unique_items),
         'failed_task_ids': failed_task_ids,
+        'failed_tasks': failed_tasks,
         'empty_result_task_ids': empty_result_task_ids,
     }
     if extra_fields:

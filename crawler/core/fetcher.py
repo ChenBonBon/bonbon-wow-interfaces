@@ -123,6 +123,7 @@ def _process_manifest_results(
                 try:
                     item_count = future.result()
                     task["status"] = "fetched"
+                    task.pop("error_message", None)
                     fetched_count += 1
                     consecutive_failure_count = 0
                     _log(
@@ -130,8 +131,9 @@ def _process_manifest_results(
                         timestamp_fn,
                         f"DONE {task['task_id']} item_count={item_count}",
                     )
-                except Exception:
+                except Exception as error:
                     task["status"] = "failed"
+                    task["error_message"] = str(error)
                     failed_count += 1
                     consecutive_failure_count += 1
                     _log(logger, timestamp_fn, f"FAIL {task['task_id']}")

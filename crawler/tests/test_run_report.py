@@ -8,6 +8,44 @@ from scripts.report_run import run as run_report
 
 
 class RunReportTest(unittest.TestCase):
+    def test_write_run_report_includes_failed_task_error_messages(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / 'manifest.json'
+            output_path = temp_path / 'run-report.json'
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        'run_id': '2026-03-18T19-00-00',
+                        'generated_at': '2026-03-18T19:00:00+08:00',
+                        'task_file': 'tasks/example.json',
+                        'task_count': 2,
+                        'tasks': [
+                            {'task_id': 'failed-task', 'status': 'failed', 'error_message': 'HTTP Error 403: Forbidden'},
+                            {'task_id': 'planned-task', 'status': 'planned'},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding='utf-8',
+            )
+            (temp_path / 'items.unique.json').write_text('[]', encoding='utf-8')
+
+            write_run_report(manifest_path, output_path=output_path)
+
+            report = json.loads(output_path.read_text(encoding='utf-8'))
+            self.assertEqual(report['failed_task_ids'], ['failed-task'])
+            self.assertEqual(
+                report['failed_tasks'],
+                [
+                    {
+                        'task_id': 'failed-task',
+                        'error_message': 'HTTP Error 403: Forbidden',
+                    }
+                ],
+            )
+
     def test_write_run_report_writes_json_summary_with_empty_and_failed_tasks(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
