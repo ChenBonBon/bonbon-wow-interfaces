@@ -12,6 +12,7 @@ from core.run_report import write_run_report
 
 LISTVIEW_ITEMS_PATTERN = re.compile(r"var\s+listviewitems\s*=\s*(\[[\s\S]*?\]);")
 ZERO_RESULTS_MARKER = "Your criteria did not match any items."
+UNQUOTED_OBJECT_KEY_PATTERN = re.compile(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)')
 FETCH_CONCURRENCY = 3
 FETCH_DELAY_MIN_SECONDS = 1.5
 FETCH_DELAY_MAX_SECONDS = 3.0
@@ -30,7 +31,7 @@ def parse_items_from_html(html_text):
     """从页面 HTML 中解析最小 item 字段。"""
     if _is_zero_result_page(html_text):
         return []
-    raw_items = json.loads(extract_listviewitems_json(html_text))
+    raw_items = json.loads(_normalize_listviewitems_json(extract_listviewitems_json(html_text)))
     return [
         {
             "itemId": item["id"],
@@ -264,6 +265,11 @@ def _sleep_before_fetch(rand_uniform=None, sleep=None):
 def _is_zero_result_page(html_text):
     """判断页面是否为 Wowhead 的零结果空列表页。"""
     return ZERO_RESULTS_MARKER in html_text
+
+
+def _normalize_listviewitems_json(raw_text):
+    """将 Wowhead 的 JS 对象字面量最小化转换为可被 json.loads 解析的文本。"""
+    return UNQUOTED_OBJECT_KEY_PATTERN.sub(r'\1"\2"\3', raw_text)
 
 
 def _default_timestamp():

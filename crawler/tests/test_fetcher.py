@@ -36,6 +36,17 @@ ZERO_RESULT_HTML = """
 </html>
 """
 
+JS_OBJECT_LITERAL_HTML = """
+<html>
+<body>
+<script>
+var listviewitems = [{"id":187566,"name":"Arcsmasher","quality":3,firstseenpatch: 0,popularity:30}];
+new Listview({data: listviewitems});
+</script>
+</body>
+</html>
+"""
+
 
 class FetcherTest(unittest.TestCase):
     def test_fetch_manifest_results_aborts_after_ten_consecutive_failures(self):
@@ -242,6 +253,15 @@ class FetcherTest(unittest.TestCase):
         items = parse_items_from_html(ZERO_RESULT_HTML)
         self.assertEqual(items, [])
 
+    def test_parse_items_from_html_parses_js_object_literal_payload(self):
+        items = parse_items_from_html(JS_OBJECT_LITERAL_HTML)
+        self.assertEqual(
+            items,
+            [
+                {"itemId": 187566, "name": "Arcsmasher"},
+            ],
+        )
+
     def test_fetch_manifest_results_writes_result_and_updates_status(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -337,6 +357,55 @@ class FetcherTest(unittest.TestCase):
             self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
             self.assertNotIn("error_message", updated_manifest["tasks"][0])
             self.assertEqual(result_data["items"], [])
+
+    def test_fetch_manifest_results_parses_js_object_literal_payload_as_success(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T20-10-00",
+                        "generated_at": "2026-03-18T20:10:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 1,
+                        "tasks": [
+                            {
+                                "task_id": "weapon-rare-main_hand_21-one_handed_maces_4",
+                                "status": "planned",
+                                "url": "https://example.com/items/js-object",
+                                "category": "weapon",
+                                "slot": "main_hand_21",
+                                "type": "one_handed_maces_4",
+                                "quality": "rare",
+                                "query_filters": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            fetch_manifest_results(
+                manifest_path,
+                fetch_url=lambda _url: JS_OBJECT_LITERAL_HTML,
+                sleep_before_fetch=lambda: None,
+                logger=lambda _line: None,
+                timestamp_fn=lambda: "2026-03-18 20:10:00",
+            )
+
+            result_path = temp_path / "weapon-rare-main_hand_21-one_handed_maces_4.json"
+            result_data = json.loads(result_path.read_text(encoding="utf-8"))
+            updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(updated_manifest["tasks"][0]["status"], "fetched")
+            self.assertNotIn("error_message", updated_manifest["tasks"][0])
+            self.assertEqual(
+                result_data["items"],
+                [{"itemId": 187566, "name": "Arcsmasher"}],
+            )
 
     def test_fetch_manifest_results_marks_failed_when_fetch_errors(self):
         with TemporaryDirectory() as temp_dir:
