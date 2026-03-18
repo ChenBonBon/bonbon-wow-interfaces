@@ -5,6 +5,7 @@ import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from urllib.request import urlopen
 
 from core.aggregator import ITEMS_BY_TASK_FILE_NAME, read_items_by_task
@@ -224,9 +225,9 @@ def _submit_next_task(
 
 def _write_manifest(manifest_file, manifest):
     """回写当前 manifest 状态。"""
-    manifest_file.write_text(
+    _atomic_write_text(
+        Path(manifest_file),
         json.dumps(manifest, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
 
 
@@ -283,7 +284,29 @@ def _write_items_by_task(output_dir, items_by_task):
     if not items_by_task:
         results_path.unlink(missing_ok=True)
         return
-    results_path.write_text(
+    _atomic_write_text(
+        results_path,
         json.dumps(items_by_task, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
+
+
+def _atomic_write_text(file_path, content):
+    """使用临时文件和 replace 原子回写文本内容。"""
+    target_path = Path(file_path)
+    temp_path = None
+    try:
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=target_path.parent,
+            prefix=f".{target_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+
+        temp_path.replace(target_path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()

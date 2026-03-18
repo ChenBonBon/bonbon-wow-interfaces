@@ -13,6 +13,8 @@ from core.fetcher import (
     parse_items_from_html,
     retry_failed_manifest_results,
     _sleep_before_fetch,
+    _write_items_by_task,
+    _write_manifest,
 )
 
 
@@ -49,6 +51,56 @@ new Listview({data: listviewitems});
 
 
 class FetcherTest(unittest.TestCase):
+    def test_write_manifest_uses_atomic_replace(self):
+        with TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+
+            original_replace = Path.replace
+            with patch("pathlib.Path.replace", autospec=True, side_effect=original_replace) as mock_replace:
+                _write_manifest(manifest_path, {"status": "fetched"})
+
+            self.assertEqual(mock_replace.call_count, 1)
+            replace_self, replace_target = mock_replace.call_args[0]
+            self.assertNotEqual(replace_self, manifest_path)
+            self.assertEqual(replace_target, manifest_path)
+            self.assertEqual(
+                json.loads(manifest_path.read_text(encoding="utf-8")),
+                {"status": "fetched"},
+            )
+
+    def test_write_items_by_task_uses_atomic_replace(self):
+        with TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir)
+
+            original_replace = Path.replace
+            with patch("pathlib.Path.replace", autospec=True, side_effect=original_replace) as mock_replace:
+                _write_items_by_task(
+                    output_dir,
+                    {
+                        "task-1": {
+                            "task_id": "task-1",
+                            "url": "https://example.com/items/1",
+                            "items": [{"itemId": 1, "name": "Example"}],
+                        }
+                    },
+                )
+
+            results_path = output_dir / "items.by-task.json"
+            self.assertEqual(mock_replace.call_count, 1)
+            replace_self, replace_target = mock_replace.call_args[0]
+            self.assertNotEqual(replace_self, results_path)
+            self.assertEqual(replace_target, results_path)
+            self.assertEqual(
+                json.loads(results_path.read_text(encoding="utf-8")),
+                {
+                    "task-1": {
+                        "task_id": "task-1",
+                        "url": "https://example.com/items/1",
+                        "items": [{"itemId": 1, "name": "Example"}],
+                    }
+                },
+            )
+
     def test_fetch_manifest_results_updates_manifest_file_incrementally(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
