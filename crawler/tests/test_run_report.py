@@ -2,12 +2,60 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from core.run_report import write_run_report
 from scripts.report_run import run as run_report
 
 
 class RunReportTest(unittest.TestCase):
+    def test_write_run_report_uses_atomic_replace(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / 'manifest.json'
+            output_path = temp_path / 'run-report.json'
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        'run_id': '2026-03-18T23-10-00',
+                        'generated_at': '2026-03-18T23:10:00+08:00',
+                        'task_file': 'tasks/example.json',
+                        'task_count': 1,
+                        'tasks': [{'task_id': 'done-task', 'status': 'fetched'}],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding='utf-8',
+            )
+            (temp_path / 'items.by-task.json').write_text(
+                json.dumps(
+                    {
+                        'done-task': {
+                            'task_id': 'done-task',
+                            'items': [{'itemId': 1001, 'name': 'Alpha Hood'}],
+                        }
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding='utf-8',
+            )
+            (temp_path / 'items.unique.json').write_text('[]', encoding='utf-8')
+
+            original_replace = Path.replace
+            with patch('pathlib.Path.replace', autospec=True, side_effect=original_replace) as mock_replace:
+                write_run_report(manifest_path, output_path=output_path)
+
+            self.assertEqual(mock_replace.call_count, 1)
+            replace_self, replace_target = mock_replace.call_args[0]
+            self.assertNotEqual(replace_self, output_path)
+            self.assertEqual(replace_target, output_path)
+            self.assertEqual(
+                json.loads(output_path.read_text(encoding='utf-8'))['run_id'],
+                '2026-03-18T23-10-00',
+            )
+
     def test_write_run_report_includes_failed_task_error_messages(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

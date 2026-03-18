@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from core.aggregator import read_items_by_task
 
@@ -65,5 +66,27 @@ def write_run_report(manifest_path, output_path=None, extra_fields=None):
     manifest_file = Path(manifest_path)
     output_file = Path(output_path) if output_path is not None else manifest_file.parent / DEFAULT_REPORT_FILE_NAME
     report = build_run_report(manifest_file, extra_fields=extra_fields)
-    output_file.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _atomic_write_text(output_file, json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     return output_file
+
+
+def _atomic_write_text(file_path, content):
+    """使用临时文件和 replace 原子回写文本内容。"""
+    target_path = Path(file_path)
+    temp_path = None
+    try:
+        with NamedTemporaryFile(
+            mode='w',
+            encoding='utf-8',
+            dir=target_path.parent,
+            prefix=f'.{target_path.name}.',
+            suffix='.tmp',
+            delete=False,
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+
+        temp_path.replace(target_path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
