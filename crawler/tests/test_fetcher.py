@@ -49,6 +49,84 @@ new Listview({data: listviewitems});
 
 
 class FetcherTest(unittest.TestCase):
+    def test_fetch_manifest_results_updates_manifest_file_incrementally(self):
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            manifest_path = temp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "run_id": "2026-03-18T22-10-00",
+                        "generated_at": "2026-03-18T22:10:00+08:00",
+                        "task_file": "tasks/example.json",
+                        "task_count": 2,
+                        "tasks": [
+                            {
+                                "task_id": "task-fast",
+                                "status": "planned",
+                                "url": "https://example.com/items/fast",
+                                "category": "armor",
+                                "slot": "head_1",
+                                "type": "cloth_armor_1",
+                                "quality": "uncommon",
+                                "query_filters": {},
+                            },
+                            {
+                                "task_id": "task-slow",
+                                "status": "planned",
+                                "url": "https://example.com/items/slow",
+                                "category": "armor",
+                                "slot": "head_1",
+                                "type": "cloth_armor_1",
+                                "quality": "rare",
+                                "query_filters": {},
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            release_second_task = threading.Event()
+
+            def fetch_with_pause(url):
+                if url.endswith("/slow"):
+                    release_second_task.wait(timeout=5)
+                return SAMPLE_HTML
+
+            with patch.object(fetcher_module, "FETCH_CONCURRENCY", 1):
+                fetch_thread = threading.Thread(
+                    target=fetch_manifest_results,
+                    kwargs={
+                        "manifest_path": manifest_path,
+                        "fetch_url": fetch_with_pause,
+                        "sleep_before_fetch": lambda: None,
+                        "logger": lambda _line: None,
+                        "timestamp_fn": lambda: "2026-03-18 22:10:00",
+                    },
+                )
+                fetch_thread.start()
+
+                deadline = time.time() + 2
+                manifest_snapshot = None
+                while time.time() < deadline:
+                    manifest_snapshot = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    if manifest_snapshot["tasks"][0]["status"] == "fetched":
+                        break
+                    time.sleep(0.01)
+
+                self.assertIsNotNone(manifest_snapshot)
+                self.assertEqual(manifest_snapshot["tasks"][0]["status"], "fetched")
+                self.assertEqual(manifest_snapshot["tasks"][1]["status"], "planned")
+                self.assertTrue(fetch_thread.is_alive())
+
+                release_second_task.set()
+                fetch_thread.join(timeout=5)
+
+            self.assertFalse(fetch_thread.is_alive())
+
     def test_fetch_manifest_results_updates_items_by_task_file_incrementally(self):
         with TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
