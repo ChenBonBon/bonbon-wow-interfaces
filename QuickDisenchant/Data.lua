@@ -97,6 +97,15 @@ function QD.isDisenchantableByRules(itemLink, quality)
   return true
 end
 
+-- 判断物品是否命中 Wowhead 维护的不可分解黑名单。
+function QD.isBlockedByWowheadBlacklist(itemID)
+  if not itemID then
+    return false
+  end
+
+  return QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS and QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS[itemID] and true or false
+end
+
 -- 扫描当前背包，返回可分解列表和按 key 索引的映射。
 function QD.collectDisenchantableItems()
   local items = {}
@@ -115,20 +124,22 @@ function QD.collectDisenchantableItems()
             itemID = C_Item.GetItemInfoInstant(itemInfo.hyperlink)
           end
 
-          local key = string.format("%d:%d", bagID, slotID)
-          local itemData = {
-            key = key,
-            bagID = bagID,
-            slotID = slotID,
-            itemID = itemID,
-            itemGUID = QD.getBagSlotItemGUID(bagID, slotID),
-            itemLink = itemInfo.hyperlink,
-            iconFileID = itemInfo.iconFileID,
-            quality = quality,
-          }
+          if not QD.isBlockedByWowheadBlacklist(itemID) then
+            local key = string.format("%d:%d", bagID, slotID)
+            local itemData = {
+              key = key,
+              bagID = bagID,
+              slotID = slotID,
+              itemID = itemID,
+              itemGUID = QD.getBagSlotItemGUID(bagID, slotID),
+              itemLink = itemInfo.hyperlink,
+              iconFileID = itemInfo.iconFileID,
+              quality = quality,
+            }
 
-          table.insert(items, itemData)
-          itemsByKey[key] = itemData
+            table.insert(items, itemData)
+            itemsByKey[key] = itemData
+          end
         end
       end
     end
