@@ -16,10 +16,26 @@ local FILTER_DEFINITIONS = {
 }
 
 local FILTER_BUTTON_GAP = 2
-local FILTER_BUTTON_HEIGHT = 20
+local FILTER_BUTTON_HEIGHT = 22
 local FILTER_FRAME_TOP_OFFSET = -28
-local FILTER_FRAME_HEIGHT = 22
+local FILTER_FRAME_HEIGHT = 24
 local FILTER_SCROLL_TOP_OFFSET = -58
+local FILTER_BUTTON_INACTIVE_BACKDROP = {
+  bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+  edgeFile = "Interface/Buttons/WHITE8x8",
+  tile = true,
+  tileSize = 8,
+  edgeSize = 1,
+  insets = { left = 1, right = 1, top = 1, bottom = 1 },
+}
+local FILTER_BUTTON_ACTIVE_BACKDROP = {
+  bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+  edgeFile = "Interface/Buttons/WHITE8x8",
+  tile = true,
+  tileSize = 8,
+  edgeSize = 1,
+  insets = { left = 1, right = 1, top = 1, bottom = 1 },
+}
 
 -- 规范化按钮所属的分类键，避免后续状态比较分散。
 function QD.getCategoryFilterDefinitions()
@@ -43,24 +59,53 @@ function QD.ensureFilterButtonRow(uiSet)
 
   local filterButtons = {}
   local buttonWidth = math.floor(((uiSet.frame:GetWidth() or QD.WINDOW_WIDTH) - 24 - ((#FILTER_DEFINITIONS - 1) * FILTER_BUTTON_GAP)) / #FILTER_DEFINITIONS)
-  if buttonWidth < 24 then
-    buttonWidth = 24
+  if buttonWidth < 56 then
+    buttonWidth = 56
   end
 
   for index, filterDef in ipairs(FILTER_DEFINITIONS) do
-    local button = CreateFrame("Button", nil, filterFrame, "UIPanelButtonTemplate")
+    local button = CreateFrame("Button", nil, filterFrame, "BackdropTemplate")
     button:SetSize(buttonWidth, FILTER_BUTTON_HEIGHT)
     button:SetPoint("LEFT", filterFrame, "LEFT", (index - 1) * (buttonWidth + FILTER_BUTTON_GAP), 0)
-    button:SetText(filterDef.label)
-    button:SetNormalFontObject("GameFontNormalSmall")
-    button:SetHighlightFontObject("GameFontHighlightSmall")
-    button:SetDisabledFontObject("GameFontDisableSmall")
+    button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
+    button:SetBackdropColor(0.12, 0.10, 0.08, 0.92)
+    button:SetBackdropBorderColor(0.55, 0.43, 0.18, 1.0)
+    button:SetHitRectInsets(0, 0, 0, 0)
+
+    local buttonInset = button:CreateTexture(nil, "ARTWORK")
+    buttonInset:SetTexture("Interface/Buttons/WHITE8x8")
+    buttonInset:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+    buttonInset:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+    buttonInset:SetVertexColor(0.24, 0.19, 0.12, 0.95)
+    button.inset = buttonInset
+
+    local buttonTopLight = button:CreateTexture(nil, "BORDER")
+    buttonTopLight:SetTexture("Interface/Buttons/WHITE8x8")
+    buttonTopLight:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+    buttonTopLight:SetPoint("TOPRIGHT", button, "TOPRIGHT", -1, -1)
+    buttonTopLight:SetHeight(1)
+    buttonTopLight:SetVertexColor(0.9, 0.82, 0.55, 0.55)
+    button.topLight = buttonTopLight
+
+    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    buttonText:SetPoint("CENTER", button, "CENTER", 0, 0)
+    buttonText:SetJustifyH("CENTER")
+    buttonText:SetText(filterDef.label)
+    button.label = buttonText
     button.baseLabel = filterDef.label
 
     button.filterKey = filterDef.key
     button:SetScript("OnClick", function(self)
       QD.state.activeFilterKey = self.filterKey
       QD.refreshWindows()
+    end)
+    button:SetScript("OnEnter", function(self)
+      if self.filterKey ~= (QD.normalizeActiveFilterKey and QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey) or "all") then
+        self:SetBackdropBorderColor(0.88, 0.72, 0.34, 1.0)
+      end
+    end)
+    button:SetScript("OnLeave", function(self)
+      QD.updateFilterButtonRow(uiSet)
     end)
 
     filterButtons[index] = button
@@ -82,23 +127,35 @@ function QD.updateFilterButtonRow(uiSet)
   for _, button in ipairs(uiSet.filterButtons) do
     local isActive = button.filterKey == activeFilterKey
     local count = categoryCounts[button.filterKey] or 0
-    button:SetText(string.format("%s(%d)", button.baseLabel or "", count))
-    local fontString = button.GetFontString and button:GetFontString() or nil
+    local fontString = button.label
+    if fontString then
+      fontString:SetText(string.format("%s(%d)", button.baseLabel or "", count))
+    end
     if isActive then
-      if button.SetButtonState then
-        button:SetButtonState("PUSHED", true)
+      button:SetBackdrop(FILTER_BUTTON_ACTIVE_BACKDROP)
+      button:SetBackdropColor(0.09, 0.07, 0.05, 0.98)
+      button:SetBackdropBorderColor(1.0, 0.84, 0.28, 1.0)
+      if button.inset then
+        button.inset:SetVertexColor(0.16, 0.12, 0.08, 0.98)
       end
-      button:LockHighlight()
+      if button.topLight then
+        button.topLight:SetAlpha(0.2)
+      end
       if fontString then
         fontString:SetTextColor(1, 0.95, 0.75)
         fontString:ClearAllPoints()
         fontString:SetPoint("CENTER", button, "CENTER", 0, -1)
       end
     else
-      if button.SetButtonState then
-        button:SetButtonState("NORMAL")
+      button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
+      button:SetBackdropColor(0.12, 0.10, 0.08, 0.92)
+      button:SetBackdropBorderColor(0.55, 0.43, 0.18, 1.0)
+      if button.inset then
+        button.inset:SetVertexColor(0.24, 0.19, 0.12, 0.95)
       end
-      button:UnlockHighlight()
+      if button.topLight then
+        button.topLight:SetAlpha(0.55)
+      end
       if fontString then
         fontString:SetTextColor(0.95, 0.82, 0.45)
         fontString:ClearAllPoints()
