@@ -5,6 +5,118 @@ if not QD then
   return
 end
 
+local FILTER_DEFINITIONS = {
+  { key = "all", label = "全部" },
+  { key = "weapon", label = "武器" },
+  { key = "cloth", label = "布甲" },
+  { key = "leather", label = "皮甲" },
+  { key = "mail", label = "锁甲" },
+  { key = "plate", label = "板甲" },
+  { key = "other", label = "其他" },
+}
+
+local FILTER_BUTTON_GAP = 1
+local FILTER_BUTTON_HEIGHT = 18
+local FILTER_FRAME_TOP_OFFSET = -28
+local FILTER_FRAME_HEIGHT = 20
+local FILTER_SCROLL_TOP_OFFSET = -54
+local FILTER_BUTTON_ACTIVE_BACKDROP = {
+  bgFile = "Interface/Buttons/UI-Listbox-Highlight",
+  edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+  tile = true,
+  tileSize = 8,
+  edgeSize = 8,
+  insets = { left = 1, right = 1, top = 1, bottom = 1 },
+}
+local FILTER_BUTTON_INACTIVE_BACKDROP = {
+  bgFile = "Interface/Buttons/UI-Listbox-Highlight",
+  edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+  tile = true,
+  tileSize = 8,
+  edgeSize = 8,
+  insets = { left = 1, right = 1, top = 1, bottom = 1 },
+}
+
+-- 规范化按钮所属的分类键，避免后续状态比较分散。
+function QD.getCategoryFilterDefinitions()
+  return FILTER_DEFINITIONS
+end
+
+-- 创建或更新窗口顶部的分类筛选按钮。
+function QD.ensureFilterButtonRow(uiSet)
+  if not uiSet or not uiSet.frame then
+    return
+  end
+
+  if uiSet.filterFrame then
+    return
+  end
+
+  local filterFrame = CreateFrame("Frame", nil, uiSet.frame)
+  filterFrame:SetPoint("TOPLEFT", uiSet.frame, "TOPLEFT", 12, FILTER_FRAME_TOP_OFFSET)
+  filterFrame:SetPoint("TOPRIGHT", uiSet.frame, "TOPRIGHT", -12, FILTER_FRAME_TOP_OFFSET)
+  filterFrame:SetHeight(FILTER_FRAME_HEIGHT)
+
+  local filterButtons = {}
+  local buttonWidth = math.floor(((uiSet.frame:GetWidth() or QD.WINDOW_WIDTH) - 24 - ((#FILTER_DEFINITIONS - 1) * FILTER_BUTTON_GAP)) / #FILTER_DEFINITIONS)
+  if buttonWidth < 24 then
+    buttonWidth = 24
+  end
+
+  for index, filterDef in ipairs(FILTER_DEFINITIONS) do
+    local button = CreateFrame("Button", nil, filterFrame, "BackdropTemplate")
+    button:SetSize(buttonWidth, FILTER_BUTTON_HEIGHT)
+    button:SetPoint("LEFT", filterFrame, "LEFT", (index - 1) * (buttonWidth + FILTER_BUTTON_GAP), 0)
+    button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
+    button:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.9)
+    button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
+
+    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    buttonText:SetPoint("CENTER")
+    buttonText:SetText(filterDef.label)
+    button.text = buttonText
+
+    button.filterKey = filterDef.key
+    button:SetScript("OnClick", function(self)
+      QD.state.activeFilterKey = self.filterKey
+      QD.refreshWindows()
+    end)
+
+    filterButtons[index] = button
+  end
+
+  uiSet.filterFrame = filterFrame
+  uiSet.filterButtons = filterButtons
+  QD.updateFilterButtonRow(uiSet)
+end
+
+-- 按当前 activeFilterKey 刷新按钮高亮。
+function QD.updateFilterButtonRow(uiSet)
+  if not uiSet or not uiSet.filterButtons then
+    return
+  end
+
+  local activeFilterKey = QD.normalizeActiveFilterKey and QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey) or "all"
+  for _, button in ipairs(uiSet.filterButtons) do
+    local isActive = button.filterKey == activeFilterKey
+    if isActive then
+      button:SetBackdrop(FILTER_BUTTON_ACTIVE_BACKDROP)
+      button:SetBackdropBorderColor(0.2, 0.75, 1.0, 1.0)
+      button:SetBackdropColor(0.15, 0.35, 0.55, 1.0)
+      if button.text then
+        button.text:SetTextColor(1, 1, 1)
+      end
+    else
+      button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
+      button:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.9)
+      button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
+      if button.text then
+        button.text:SetTextColor(0.85, 0.85, 0.85)
+      end
+    end
+  end
+end
+
 -- 创建标准窗口框体（标题、滚动区域与空状态文本）。
 function QD.createWindowFrame(frameName)
   local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
@@ -66,8 +178,10 @@ function QD.ensureMainWindow()
     end
   end)
 
+  QD.mainUI.frame = frame
+  QD.ensureFilterButtonRow(QD.mainUI)
   scrollFrame:ClearAllPoints()
-  scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -30)
+  scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, FILTER_SCROLL_TOP_OFFSET)
   scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 40)
 
   local plusButton = CreateFrame("Button", nil, contentFrame)
@@ -150,7 +264,6 @@ function QD.ensureMainWindow()
     end
   end)
 
-  QD.mainUI.frame = frame
   QD.mainUI.titleText = titleText
   QD.mainUI.scrollFrame = scrollFrame
   QD.mainUI.contentFrame = contentFrame
@@ -169,6 +282,11 @@ function QD.ensureCandidateWindow()
   titleText:SetText("可添加装备")
 
   QD.candidateUI.frame = frame
+  QD.ensureFilterButtonRow(QD.candidateUI)
+  scrollFrame:ClearAllPoints()
+  scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, FILTER_SCROLL_TOP_OFFSET)
+  scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 12)
+
   QD.candidateUI.titleText = titleText
   QD.candidateUI.scrollFrame = scrollFrame
   QD.candidateUI.contentFrame = contentFrame
@@ -422,6 +540,9 @@ end
 
 -- 刷新当前可见的插件窗口。
 function QD.refreshWindows()
+  QD.updateFilterButtonRow(QD.mainUI)
+  QD.updateFilterButtonRow(QD.candidateUI)
+
   if QD.mainUI.frame and QD.mainUI.frame:IsShown() then
     QD.refreshMainWindow()
   end
