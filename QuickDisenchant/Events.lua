@@ -26,6 +26,7 @@ function QD.runScan()
   QD.state.allItems = items
   QD.state.allItemsByKey = itemsByKey
   QD.state.pendingDisenchant = nil
+  QD.state.activeFilterKey = "all"
   QD.resetSelectionToAllItems()
 
   QD.ensureMainWindow()
