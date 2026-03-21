@@ -186,6 +186,20 @@ function QD.getFilteredSelectedItems()
   return filteredItems
 end
 
+-- 返回当前筛选下的全部候选物品列表。
+function QD.getFilteredAllItems()
+  local filteredItems = {}
+  local activeFilterKey = QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey)
+
+  for _, item in ipairs(QD.state.allItems) do
+    if QD.matchesActiveFilter(item, activeFilterKey) then
+      table.insert(filteredItems, item)
+    end
+  end
+
+  return filteredItems
+end
+
 -- 返回当前筛选下、尚未选中且未进白名单的候选物品列表。
 function QD.getFilteredAvailableItems()
   local filteredItems = {}

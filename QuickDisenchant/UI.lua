@@ -487,7 +487,7 @@ end
 function QD.refreshMainWindow()
   QD.ensureMainWindow()
 
-  local selectedItems = QD.getSelectedItems()
+  local selectedItems = QD.getFilteredSelectedItems()
   QD.renderGrid(QD.mainUI, selectedItems, QD.onMainItemClick)
 
   local plusIndex = #selectedItems + 1
@@ -512,10 +512,11 @@ end
 function QD.refreshCandidateWindow()
   QD.ensureCandidateWindow()
 
-  local total = #QD.state.allItems
+  local filteredItems = QD.getFilteredAllItems()
+  local total = #filteredItems
   local selectedCount = 0
   local whitelistCount = 0
-  for _, item in ipairs(QD.state.allItems) do
+  for _, item in ipairs(filteredItems) do
     if QD.state.selectedKeys[item.key] then
       selectedCount = selectedCount + 1
     end
@@ -524,7 +525,7 @@ function QD.refreshCandidateWindow()
     end
   end
 
-  QD.renderGrid(QD.candidateUI, QD.state.allItems, QD.onCandidateItemClick, function(item)
+  QD.renderGrid(QD.candidateUI, filteredItems, QD.onCandidateItemClick, function(item)
     return (QD.state.selectedKeys[item.key] or QD.isItemWhitelisted(item)) and true or false
   end, function(item)
     return QD.isItemWhitelisted(item)
@@ -534,7 +535,6 @@ function QD.refreshCandidateWindow()
   if availableCount < 0 then
     availableCount = 0
   end
-
   QD.candidateUI.titleText:SetText(string.format("可添加装备 (%d/%d) 白名单:%d", availableCount, total, whitelistCount))
 end
 
