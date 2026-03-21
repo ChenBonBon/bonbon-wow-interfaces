@@ -19,6 +19,10 @@ QD.QUALITY_EPIC = (Enum and Enum.ItemQuality and Enum.ItemQuality.Epic) or 4
 QD.ITEM_CLASS_WEAPON = (Enum and Enum.ItemClass and Enum.ItemClass.Weapon) or 2
 QD.ITEM_CLASS_ARMOR = (Enum and Enum.ItemClass and Enum.ItemClass.Armor) or 4
 QD.ITEM_CLASS_PROFESSION = (Enum and Enum.ItemClass and (Enum.ItemClass.Profession or Enum.ItemClass.Professions)) or 19
+QD.ITEM_SUBCLASS_ARMOR_CLOTH = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmorSubclass.Cloth) or 1
+QD.ITEM_SUBCLASS_ARMOR_LEATHER = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmorSubclass.Leather) or 2
+QD.ITEM_SUBCLASS_ARMOR_MAIL = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmorSubclass.Mail) or 3
+QD.ITEM_SUBCLASS_ARMOR_PLATE = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmorSubclass.Plate) or 4
 
 -- 宫格与窗口布局配置。
 QD.COLUMNS = 3
@@ -44,12 +48,14 @@ function QD.bindSavedVariables()
     allItems = {},
     allItemsByKey = {},
     selectedKeys = {},
+    activeFilterKey = "all",
     whitelistByGUID = QuickDisenchantDB.whitelistByGUID,
     pendingDisenchant = nil,
   }
 
   -- 每次绑定都强制指向持久化表，避免运行时引用到旧空表。
   QD.state.whitelistByGUID = QuickDisenchantDB.whitelistByGUID
+  QD.state.activeFilterKey = QD.state.activeFilterKey or "all"
 end
 
 QD.bindSavedVariables()

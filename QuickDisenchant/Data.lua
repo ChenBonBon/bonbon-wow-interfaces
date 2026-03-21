@@ -51,6 +51,16 @@ function QD.isDisenchantSpellcastEvent(unit, spellID)
   return unit == "player" and spellID == QD.DISENCHANT_SPELL_ID
 end
 
+local ACTIVE_FILTER_KEYS = {
+  all = true,
+  weapon = true,
+  cloth = true,
+  leather = true,
+  mail = true,
+  plate = true,
+  other = true,
+}
+
 -- 获取需要扫描的最高背包索引。
 function QD.getBagRangeEnd()
   return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
@@ -104,6 +114,90 @@ function QD.isBlockedByWowheadBlacklist(itemID)
   end
 
   return QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS and QD.WOWHEAD_NON_DISENCHANTABLE_ITEM_IDS[itemID] and true or false
+end
+
+-- 归一化当前分类筛选键，未知值回退到全部。
+function QD.normalizeActiveFilterKey(filterKey)
+  if type(filterKey) ~= "string" then
+    return "all"
+  end
+
+  local normalized = string.lower((filterKey:gsub("^%s*(.-)%s*$", "%1")))
+  if normalized == "" or not ACTIVE_FILTER_KEYS[normalized] then
+    return "all"
+  end
+
+  return normalized
+end
+
+-- 获取物品在当前分类体系下的筛选键。
+function QD.getItemCategoryFilterKey(item)
+  if not item or not item.itemLink or not C_Item or not C_Item.GetItemInfoInstant then
+    return "other"
+  end
+
+  local _, _, _, _, _, itemClassID, itemSubClassID = C_Item.GetItemInfoInstant(item.itemLink)
+  if itemClassID == QD.ITEM_CLASS_WEAPON then
+    return "weapon"
+  end
+
+  if itemClassID == QD.ITEM_CLASS_ARMOR then
+    if itemSubClassID == QD.ITEM_SUBCLASS_ARMOR_CLOTH then
+      return "cloth"
+    end
+
+    if itemSubClassID == QD.ITEM_SUBCLASS_ARMOR_LEATHER then
+      return "leather"
+    end
+
+    if itemSubClassID == QD.ITEM_SUBCLASS_ARMOR_MAIL then
+      return "mail"
+    end
+
+    if itemSubClassID == QD.ITEM_SUBCLASS_ARMOR_PLATE then
+      return "plate"
+    end
+  end
+
+  return "other"
+end
+
+-- 判断物品是否命中当前分类筛选。
+function QD.matchesActiveFilter(item, filterKey)
+  local normalizedFilterKey = QD.normalizeActiveFilterKey(filterKey or (QD.state and QD.state.activeFilterKey))
+  if normalizedFilterKey == "all" then
+    return true
+  end
+
+  return QD.getItemCategoryFilterKey(item) == normalizedFilterKey
+end
+
+-- 返回当前筛选下的已选物品列表。
+function QD.getFilteredSelectedItems()
+  local filteredItems = {}
+  local activeFilterKey = QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey)
+
+  for _, item in ipairs(QD.getSelectedItems()) do
+    if QD.matchesActiveFilter(item, activeFilterKey) then
+      table.insert(filteredItems, item)
+    end
+  end
+
+  return filteredItems
+end
+
+-- 返回当前筛选下、尚未选中且未进白名单的候选物品列表。
+function QD.getFilteredAvailableItems()
+  local filteredItems = {}
+  local activeFilterKey = QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey)
+
+  for _, item in ipairs(QD.state.allItems) do
+    if not QD.state.selectedKeys[item.key] and not QD.isItemWhitelisted(item) and QD.matchesActiveFilter(item, activeFilterKey) then
+      table.insert(filteredItems, item)
+    end
+  end
+
+  return filteredItems
 end
 
 -- 扫描当前背包，返回可分解列表和按 key 索引的映射。
