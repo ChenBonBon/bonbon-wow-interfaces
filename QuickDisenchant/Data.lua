@@ -130,6 +130,33 @@ function QD.normalizeActiveFilterKey(filterKey)
   return normalized
 end
 
+-- 统计背包候选物品在各分类下的数量，供筛选按钮显示总览数量。
+function QD.getCategoryFilterCounts()
+  local counts = {
+    all = 0,
+    weapon = 0,
+    cloth = 0,
+    leather = 0,
+    mail = 0,
+    plate = 0,
+    other = 0,
+  }
+
+  local allItems = (QD.state and QD.state.allItems) or {}
+  counts.all = #allItems
+
+  for _, item in ipairs(allItems) do
+    local categoryKey = QD.getItemCategoryFilterKey(item)
+    if counts[categoryKey] ~= nil then
+      counts[categoryKey] = counts[categoryKey] + 1
+    else
+      counts.other = counts.other + 1
+    end
+  end
+
+  return counts
+end
+
 -- 获取物品在当前分类体系下的筛选键。
 function QD.getItemCategoryFilterKey(item)
   if not item or not item.itemLink or not C_Item or not C_Item.GetItemInfoInstant then

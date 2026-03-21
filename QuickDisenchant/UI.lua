@@ -15,27 +15,11 @@ local FILTER_DEFINITIONS = {
   { key = "other", label = "其他" },
 }
 
-local FILTER_BUTTON_GAP = 1
-local FILTER_BUTTON_HEIGHT = 18
+local FILTER_BUTTON_GAP = 2
+local FILTER_BUTTON_HEIGHT = 20
 local FILTER_FRAME_TOP_OFFSET = -28
-local FILTER_FRAME_HEIGHT = 20
-local FILTER_SCROLL_TOP_OFFSET = -54
-local FILTER_BUTTON_ACTIVE_BACKDROP = {
-  bgFile = "Interface/Buttons/UI-Listbox-Highlight",
-  edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-  tile = true,
-  tileSize = 8,
-  edgeSize = 8,
-  insets = { left = 1, right = 1, top = 1, bottom = 1 },
-}
-local FILTER_BUTTON_INACTIVE_BACKDROP = {
-  bgFile = "Interface/Buttons/UI-Listbox-Highlight",
-  edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-  tile = true,
-  tileSize = 8,
-  edgeSize = 8,
-  insets = { left = 1, right = 1, top = 1, bottom = 1 },
-}
+local FILTER_FRAME_HEIGHT = 22
+local FILTER_SCROLL_TOP_OFFSET = -58
 
 -- 规范化按钮所属的分类键，避免后续状态比较分散。
 function QD.getCategoryFilterDefinitions()
@@ -64,17 +48,14 @@ function QD.ensureFilterButtonRow(uiSet)
   end
 
   for index, filterDef in ipairs(FILTER_DEFINITIONS) do
-    local button = CreateFrame("Button", nil, filterFrame, "BackdropTemplate")
+    local button = CreateFrame("Button", nil, filterFrame, "UIPanelButtonTemplate")
     button:SetSize(buttonWidth, FILTER_BUTTON_HEIGHT)
     button:SetPoint("LEFT", filterFrame, "LEFT", (index - 1) * (buttonWidth + FILTER_BUTTON_GAP), 0)
-    button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
-    button:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.9)
-    button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
-
-    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    buttonText:SetPoint("CENTER")
-    buttonText:SetText(filterDef.label)
-    button.text = buttonText
+    button:SetText(filterDef.label)
+    button:SetNormalFontObject("GameFontNormalSmall")
+    button:SetHighlightFontObject("GameFontHighlightSmall")
+    button:SetDisabledFontObject("GameFontDisableSmall")
+    button.baseLabel = filterDef.label
 
     button.filterKey = filterDef.key
     button:SetScript("OnClick", function(self)
@@ -97,21 +78,31 @@ function QD.updateFilterButtonRow(uiSet)
   end
 
   local activeFilterKey = QD.normalizeActiveFilterKey and QD.normalizeActiveFilterKey(QD.state and QD.state.activeFilterKey) or "all"
+  local categoryCounts = QD.getCategoryFilterCounts and QD.getCategoryFilterCounts() or {}
   for _, button in ipairs(uiSet.filterButtons) do
     local isActive = button.filterKey == activeFilterKey
+    local count = categoryCounts[button.filterKey] or 0
+    button:SetText(string.format("%s(%d)", button.baseLabel or "", count))
+    local fontString = button.GetFontString and button:GetFontString() or nil
     if isActive then
-      button:SetBackdrop(FILTER_BUTTON_ACTIVE_BACKDROP)
-      button:SetBackdropBorderColor(0.2, 0.75, 1.0, 1.0)
-      button:SetBackdropColor(0.15, 0.35, 0.55, 1.0)
-      if button.text then
-        button.text:SetTextColor(1, 1, 1)
+      if button.SetButtonState then
+        button:SetButtonState("PUSHED", true)
+      end
+      button:LockHighlight()
+      if fontString then
+        fontString:SetTextColor(1, 0.95, 0.75)
+        fontString:ClearAllPoints()
+        fontString:SetPoint("CENTER", button, "CENTER", 0, -1)
       end
     else
-      button:SetBackdrop(FILTER_BUTTON_INACTIVE_BACKDROP)
-      button:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.9)
-      button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
-      if button.text then
-        button.text:SetTextColor(0.85, 0.85, 0.85)
+      if button.SetButtonState then
+        button:SetButtonState("NORMAL")
+      end
+      button:UnlockHighlight()
+      if fontString then
+        fontString:SetTextColor(0.95, 0.82, 0.45)
+        fontString:ClearAllPoints()
+        fontString:SetPoint("CENTER", button, "CENTER", 0, 0)
       end
     end
   end
@@ -486,6 +477,7 @@ end
 -- 刷新主窗口：标题、宫格、加号槽位与分解按钮状态。
 function QD.refreshMainWindow()
   QD.ensureMainWindow()
+  QD.updateFilterButtonRow(QD.mainUI)
 
   local selectedItems = QD.getFilteredSelectedItems()
   QD.renderGrid(QD.mainUI, selectedItems, QD.onMainItemClick)
@@ -511,6 +503,7 @@ end
 -- 刷新候选窗口内容与计数信息。
 function QD.refreshCandidateWindow()
   QD.ensureCandidateWindow()
+  QD.updateFilterButtonRow(QD.candidateUI)
 
   local filteredItems = QD.getFilteredAllItems()
   local total = #filteredItems
