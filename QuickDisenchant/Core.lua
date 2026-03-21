@@ -25,8 +25,8 @@ QD.ITEM_SUBCLASS_ARMOR_MAIL = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmo
 QD.ITEM_SUBCLASS_ARMOR_PLATE = (Enum and Enum.ItemArmorSubclass and Enum.ItemArmorSubclass.Plate) or 4
 
 -- 宫格与窗口布局配置。
-QD.COLUMNS = 3
-QD.VISIBLE_ROWS = 3
+QD.COLUMNS = 4
+QD.VISIBLE_ROWS = 2
 QD.ICON_SIZE = 36
 QD.ICON_GAP = 8
 QD.PLUS_VISUAL_SIZE = QD.ICON_SIZE - 6
