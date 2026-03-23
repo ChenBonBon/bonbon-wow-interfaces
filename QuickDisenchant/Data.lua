@@ -347,7 +347,7 @@ end
 
 -- 返回当前单步分解队列的队首物品。
 function QD.getQueueHeadItem()
-  local selectedItems = QD.getSelectedItems()
+  local selectedItems = QD.getFilteredSelectedItems()
   return selectedItems[1]
 end
 
