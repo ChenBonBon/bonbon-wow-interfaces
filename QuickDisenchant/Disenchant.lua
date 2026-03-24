@@ -11,6 +11,8 @@ function QD.beginPendingDisenchant(actionItem)
     return
   end
 
+  print(string.format("%s 正在分解：%s", QD.ADDON_PREFIX, actionItem.itemLink or "物品"))
+
   QD.state.pendingDisenchant = {
     key = actionItem.key,
     bagID = actionItem.bagID,

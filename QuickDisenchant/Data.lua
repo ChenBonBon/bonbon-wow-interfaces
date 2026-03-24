@@ -130,7 +130,7 @@ function QD.normalizeActiveFilterKey(filterKey)
   return normalized
 end
 
--- 统计背包候选物品在各分类下的数量，供筛选按钮显示总览数量。
+-- 统计当前已选中物品在各分类下的数量，供筛选按钮显示队列数量。
 function QD.getCategoryFilterCounts()
   local counts = {
     all = 0,
@@ -142,10 +142,10 @@ function QD.getCategoryFilterCounts()
     other = 0,
   }
 
-  local allItems = (QD.state and QD.state.allItems) or {}
-  counts.all = #allItems
+  local selectedItems = QD.getSelectedItems()
+  counts.all = #selectedItems
 
-  for _, item in ipairs(allItems) do
+  for _, item in ipairs(selectedItems) do
     local categoryKey = QD.getItemCategoryFilterKey(item)
     if counts[categoryKey] ~= nil then
       counts[categoryKey] = counts[categoryKey] + 1
